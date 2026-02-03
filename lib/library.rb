@@ -71,6 +71,8 @@ class Library
       end
     end
 
+    load_highlights
+
     total = @books.size
     if total > 0
       @books.each_with_index do |book, index|
@@ -130,6 +132,28 @@ class Library
   def content_column_name(name)
     name_downcase = name.to_s.downcase
     content_columns.find { |column| column.to_s.downcase == name_downcase }
+  end
+
+  def load_highlights
+    highlight_columns = %w[ContentID Text DateCreated Hidden]
+    @database.execute "SELECT #{highlight_columns.join(', ')} FROM Bookmark" do |row|
+      content_id = row[0].to_s
+      text = row[1].to_s
+      date_created = row[2]
+      hidden = row[3].to_s == '1'
+      next if hidden
+      next if content_id.empty? || text.empty? || date_created.nil?
+
+      words = text.strip.split(/\s+/)
+      highlight_type = words.length == 1 ? 'word' : 'quote'
+
+      book = @books.find { |entry| entry.id.to_s == content_id }
+      next unless book
+
+      book.highlights << { text: text, date_created: date_created, type: highlight_type }
+    end
+  rescue SQLite3::SQLException
+    nil
   end
 
   def count_chapters(book_id, book_id_column)

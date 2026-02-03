@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
     <title>Kobo Reading Stats</title>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/style.css">
 
 
@@ -32,6 +32,7 @@
           <div class="view-toggle" role="group" aria-label="View selector">
             <button id="view-by-book" class="view-button active" type="button">By Book</button>
             <button id="view-all" class="view-button" type="button">All</button>
+            <button id="view-highlights" class="view-button" type="button">Highlights</button>
           </div>
         </div>
       </div>
@@ -97,6 +98,29 @@
               <div id="all-punchcard" class="punchcard"></div>
               <div class="section-title">Books read this year</div>
               <div id="year-books" class="year-books"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="highlights-section" class="row" hidden>
+        <div class="col-md-6 col-sm-12">
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
+              <h3 class="panel-title">New words</h3>
+            </div>
+            <div class="panel-body">
+              <div id="highlight-words" class="highlight-list"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
+              <h3 class="panel-title">Quotes</h3>
+            </div>
+            <div class="panel-body">
+              <div id="highlight-quotes" class="highlight-list"></div>
             </div>
           </div>
         </div>
