@@ -45,11 +45,12 @@ def resolve_default_db_path
 end
 
 def extract_kobo_covers(source_dir, output_dir)
-  return unless Dir.exist?(source_dir)
+  return 0 unless Dir.exist?(source_dir)
 
   FileUtils.rm_rf(output_dir)
   FileUtils.mkdir_p(output_dir)
 
+  count = 0
   Dir.glob(File.join(source_dir, '**', '*')).each do |path|
     next unless File.file?(path)
 
@@ -58,9 +59,11 @@ def extract_kobo_covers(source_dir, output_dir)
     basename = "#{basename}.jpg" unless basename.downcase.end_with?('.jpg')
 
     FileUtils.cp(path, File.join(output_dir, basename))
+    count += 1
   end
 
   puts "Covers extracted to #{output_dir}"
+  count
 end
 
 
@@ -75,7 +78,7 @@ end
 
 library = Library.new(options[:db_path], debug: options[:debug])
 
-extract_kobo_covers("/Volumes/KOBOeReader/.kobo-images", File.expand_path("./frontend/covers"))
+cover_count = extract_kobo_covers("/Volumes/KOBOeReader/.kobo-images", File.expand_path("./frontend/covers"))
 
 if options[:console]
   puts library.to_s
@@ -83,3 +86,13 @@ else
   library.save(options[:output_file])
   puts "Data exported to #{options[:output_file]}!"
 end
+
+books_imported = library.books.size
+highlights = library.books.flat_map { |book| book.highlights || [] }
+highlight_words = highlights.count { |highlight| highlight[:type] == 'word' }
+highlight_quotes = highlights.count { |highlight| highlight[:type] == 'quote' }
+
+puts "Books imported: #{books_imported}"
+puts "Highlights: #{highlights.size} (#{highlight_quotes} quotes, #{highlight_words} new words)"
+puts "New ISBN fetched: #{library.isbn_new_count}"
+puts "Covers imported: #{cover_count > 0 ? 'yes' : 'no'} (#{cover_count})"

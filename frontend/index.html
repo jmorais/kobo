@@ -110,6 +110,14 @@
               <h3 class="panel-title">New words</h3>
             </div>
             <div class="panel-body">
+              <div class="highlight-controls">
+                <input id="highlight-words-search" class="form-control" type="search" placeholder="Search new words..." autocomplete="off">
+                <select id="highlight-words-sort" class="form-control">
+                  <option value="alpha" selected>Sort alphabetically</option>
+                  <option value="book">Sort by book</option>
+                  <option value="date">Sort by date added</option>
+                </select>
+              </div>
               <div id="highlight-words" class="highlight-list"></div>
             </div>
           </div>
@@ -120,6 +128,13 @@
               <h3 class="panel-title">Quotes</h3>
             </div>
             <div class="panel-body">
+              <div class="highlight-controls">
+                <input id="highlight-quotes-search" class="form-control" type="search" placeholder="Search quotes..." autocomplete="off">
+                <select id="highlight-quotes-sort" class="form-control">
+                  <option value="book">Sort by book</option>
+                  <option value="date" selected>Sort by date added</option>
+                </select>
+              </div>
               <div id="highlight-quotes" class="highlight-list"></div>
             </div>
           </div>

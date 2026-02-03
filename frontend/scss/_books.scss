@@ -118,7 +118,22 @@
   flex: 1;
 
   .book-header-meta {
-    margin-top: 8px;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+
+    > div {
+      background: #fff;
+      border: 1px solid #eef1f6;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      min-height: 36px;
+    }
   }
 
   .book-status {
@@ -127,18 +142,18 @@
   
   .book-time {
     margin-top: 0;
-    font-size: 12px;
   }
 
   .book-chapters {
     margin-top: 0;
-    font-size: 12px;
-    // color: #6b7280;
   }
 
   .book-turns {
-    font-size: 12px;
-    // color: #6b7280;
+    margin-top: 0;
+  }
+
+  .book-highlights {
+    margin-top: 0;
   }
 }
 

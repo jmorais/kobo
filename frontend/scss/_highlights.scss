@@ -1,0 +1,60 @@
+.highlight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.highlight-controls {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  input.form-control {
+    flex: 1 1 180px;
+  }
+
+  select.form-control {
+    flex: 0 0 170px;
+  }
+
+  .form-control {
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+.highlight-item {
+  border: 1px solid #eef1f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.highlight-text {
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.highlight-word {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.highlight-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.highlight-empty {
+  color: #9ca3af;
+  font-size: 12px;
+}

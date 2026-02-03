@@ -9,12 +9,14 @@ require_relative 'event'
 class Library
 
   attr_accessor :books, :database
+  attr_reader :isbn_new_count
 
   def initialize(db_path, debug: false)
     @database = SQLite3::Database.open db_path
     @books = []
     @isbn_cache = {}
     @isbn_cache_dirty = false
+    @isbn_new_count = 0
     @debug = debug
     load_isbn_cache
 
@@ -135,19 +137,21 @@ class Library
   end
 
   def load_highlights
-    highlight_columns = %w[ContentID Text DateCreated Hidden]
+    highlight_columns = %w[VolumeID ContentID Text DateCreated Hidden]
     @database.execute "SELECT #{highlight_columns.join(', ')} FROM Bookmark" do |row|
-      content_id = row[0].to_s
-      text = row[1].to_s
-      date_created = row[2]
-      hidden = row[3].to_s == '1'
+      volume_id = row[0].to_s
+      content_id = row[1].to_s
+      text = row[2].to_s
+      date_created = row[3]
+      hidden = row[4].to_s == '1'
       next if hidden
-      next if content_id.empty? || text.empty? || date_created.nil?
+      next if text.empty? || date_created.nil?
 
       words = text.strip.split(/\s+/)
       highlight_type = words.length == 1 ? 'word' : 'quote'
 
-      book = @books.find { |entry| entry.id.to_s == content_id }
+      book = @books.find { |entry| entry.id.to_s == volume_id }
+      book ||= @books.find { |entry| entry.id.to_s == content_id }
       next unless book
 
       book.highlights << { text: text, date_created: date_created, type: highlight_type }
@@ -264,9 +268,14 @@ class Library
   end
 
   def cache_isbn(cache_key, value)
+    existed = @isbn_cache.key?(cache_key)
+    previous = @isbn_cache[cache_key]
     normalized = normalize_isbn13(value)
     @isbn_cache[cache_key] = normalized
     @isbn_cache_dirty = true
+    if normalized && (!existed || previous != normalized)
+      @isbn_new_count += 1
+    end
     normalized
   end
 

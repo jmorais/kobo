@@ -93,6 +93,22 @@ function formatLocalDate(date) {
   return year + '-' + month + '-' + day;
 }
 
+function formatHighlightDate(value) {
+  if (!value) {
+    return 'Unknown date';
+  }
+  var date = new Date(value);
+  if (isNaN(date)) {
+    return 'Unknown date';
+  }
+  var day = date.getDate().toString().padStart(2, '0');
+  var month = (date.getMonth() + 1).toString().padStart(2, '0');
+  var year = date.getFullYear();
+  var hours = date.getHours().toString().padStart(2, '0');
+  var minutes = date.getMinutes().toString().padStart(2, '0');
+  return day + '/' + month + '/' + year + ' às ' + hours + ':' + minutes;
+}
+
 function formatOrdinal(value) {
   var remainder = value % 100;
   if (remainder >= 11 && remainder <= 13) {
@@ -342,6 +358,98 @@ function getDayTooltip() {
     .append('div')
     .attr('class', 'day-tooltip')
     .style('opacity', 0);
+}
+
+function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordSort, quoteSort) {
+  var wordsContainer = document.getElementById(wordsId);
+  var quotesContainer = document.getElementById(quotesId);
+  if (!wordsContainer || !quotesContainer) {
+    return;
+  }
+
+  var allHighlights = [];
+  books.forEach(function (book) {
+    (book.highlights || []).forEach(function (highlight) {
+      allHighlights.push({
+        text: highlight.text,
+        date: highlight.date_created,
+        type: highlight.type,
+        bookTitle: book.title || 'Untitled'
+      });
+    });
+  });
+
+  var normalizeQuery = function (value) {
+    return (value || '').toLowerCase().trim();
+  };
+  var wordTerm = normalizeQuery(wordQuery);
+  var quoteTerm = normalizeQuery(quoteQuery);
+
+  var matchesTerm = function (item, term) {
+    if (!term) {
+      return true;
+    }
+    var haystack = (item.text || '').toLowerCase() + ' ' + (item.bookTitle || '').toLowerCase();
+    return haystack.indexOf(term) !== -1;
+  };
+
+  var words = allHighlights.filter(function (item) {
+    return item.type === 'word' && matchesTerm(item, wordTerm);
+  });
+  var quotes = allHighlights.filter(function (item) {
+    return item.type === 'quote' && matchesTerm(item, quoteTerm);
+  });
+
+  var toTimestamp = function (value) {
+    var date = new Date(value);
+    return isNaN(date) ? 0 : date.getTime();
+  };
+
+  var sortBy = function (items, mode) {
+    var sorted = items.slice();
+    if (mode === 'alpha') {
+      sorted.sort(function (a, b) {
+        return (a.text || '').localeCompare(b.text || '');
+      });
+      return sorted;
+    }
+    if (mode === 'book') {
+      sorted.sort(function (a, b) {
+        return (a.bookTitle || '').localeCompare(b.bookTitle || '');
+      });
+      return sorted;
+    }
+    if (mode === 'date') {
+      sorted.sort(function (a, b) {
+        return toTimestamp(b.date) - toTimestamp(a.date);
+      });
+      return sorted;
+    }
+    return sorted;
+  };
+
+  words = sortBy(words, wordSort || 'alpha');
+  quotes = sortBy(quotes, quoteSort || 'date');
+
+  var renderList = function (container, items, isWord) {
+    if (!items.length) {
+      container.innerHTML = '<div class="highlight-empty">No highlights yet.</div>';
+      return;
+    }
+    container.innerHTML = items.map(function (item) {
+      var textClass = isWord ? 'highlight-word' : 'highlight-text';
+      var dateLabel = formatHighlightDate(item.date);
+      return (
+        '<div class="highlight-item">' +
+          '<div class="' + textClass + '">' + item.text + '</div>' +
+          '<div class="highlight-meta">' + item.bookTitle + ' • ' + dateLabel + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  };
+
+  renderList(wordsContainer, words, true);
+  renderList(quotesContainer, quotes, false);
 }
 
 function collectSessions(books) {
@@ -1133,8 +1241,12 @@ function renderBookDetail(book) {
   var pageTurnsLine = pageTurnsLabel
     ? '<div class="book-turns">' + pageTurnsLabel + '</div>'
     : '';
+  var highlights = Array.isArray(book.highlights) ? book.highlights : [];
+  var newWordsCount = highlights.filter(function (highlight) { return highlight.type === 'word'; }).length;
+  var quotesCount = highlights.filter(function (highlight) { return highlight.type === 'quote'; }).length;
+  var highlightsLine = '<div class="book-highlights">' + newWordsCount + ' new words • ' + quotesCount + ' quotes</div>';
   var statusBadge = '<span class="status-badge ' + statusClass + '">' + statusText + '</span>';
-  var headerMeta = '<div class="book-header-meta">' + chaptersLine + totalTimeLine + pageTurnsLine + '</div>';
+  var headerMeta = '<div class="book-header-meta">' + chaptersLine + totalTimeLine + highlightsLine + pageTurnsLine + '</div>';
   headerText.innerHTML = '<h2>' + (book.title || 'Untitled') + '</h2>' +
     '<div class="book-subtitle">' + (book.author || 'Unknown author') + '</div>' +
     seriesLine +
@@ -1339,16 +1451,70 @@ $(function () {
     renderAllSection();
     renderGeneralStats('general-stats', computeGeneralStats(library.books, allSessions, 10));
     renderBookSection();
+    var highlightWordsSearch = document.getElementById('highlight-words-search');
+    var highlightQuotesSearch = document.getElementById('highlight-quotes-search');
+    var highlightWordsSort = document.getElementById('highlight-words-sort');
+    var highlightQuotesSort = document.getElementById('highlight-quotes-sort');
+    var highlightWordQuery = '';
+    var highlightQuoteQuery = '';
+    var highlightWordSort = (highlightWordsSort && highlightWordsSort.value) || 'alpha';
+    var highlightQuoteSort = (highlightQuotesSort && highlightQuotesSort.value) || 'date';
+
+    var updateHighlights = function () {
+      renderHighlights(
+        'highlight-words',
+        'highlight-quotes',
+        library.books,
+        highlightWordQuery,
+        highlightQuoteQuery,
+        highlightWordSort,
+        highlightQuoteSort
+      );
+    };
+
+    if (highlightWordsSearch) {
+      highlightWordsSearch.addEventListener('input', function (event) {
+        highlightWordQuery = event.target.value || '';
+        updateHighlights();
+      });
+    }
+
+    if (highlightQuotesSearch) {
+      highlightQuotesSearch.addEventListener('input', function (event) {
+        highlightQuoteQuery = event.target.value || '';
+        updateHighlights();
+      });
+    }
+
+    if (highlightWordsSort) {
+      highlightWordsSort.addEventListener('change', function (event) {
+        highlightWordSort = event.target.value || 'alpha';
+        updateHighlights();
+      });
+    }
+
+    if (highlightQuotesSort) {
+      highlightQuotesSort.addEventListener('change', function (event) {
+        highlightQuoteSort = event.target.value || 'date';
+        updateHighlights();
+      });
+    }
+
+    updateHighlights();
     closeTimelineModal();
 
     var byBookButton = document.getElementById('view-by-book');
     var allButton = document.getElementById('view-all');
+    var highlightsButton = document.getElementById('view-highlights');
     var byBookSection = document.getElementById('by-book-section');
     var allSection = document.getElementById('all-section');
+    var highlightsSection = document.getElementById('highlights-section');
 
     var setView = function (view) {
       var isByBook = view === 'book';
-      if (!isByBook) {
+      var isAll = view === 'all';
+      var isHighlights = view === 'highlights';
+      if (isAll) {
         selectedBook = null;
         updateBookList();
         if (!isAllHash()) {
@@ -1361,26 +1527,36 @@ $(function () {
         byBookSection.hidden = !isByBook;
       }
       if (allSection) {
-        allSection.hidden = isByBook;
+        allSection.hidden = !isAll;
+      }
+      if (highlightsSection) {
+        highlightsSection.hidden = !isHighlights;
       }
       if (byBookButton) {
         byBookButton.classList.toggle('active', isByBook);
       }
       if (allButton) {
-        allButton.classList.toggle('active', !isByBook);
+        allButton.classList.toggle('active', isAll);
+      }
+      if (highlightsButton) {
+        highlightsButton.classList.toggle('active', isHighlights);
       }
       if (typeof window.requestAnimationFrame === 'function') {
         window.requestAnimationFrame(function () {
           if (isByBook) {
             renderBookSection();
-          } else {
+          } else if (isAll) {
             renderAllSection();
+          } else if (isHighlights) {
+            updateHighlights();
           }
         });
       } else if (isByBook) {
         renderBookSection();
-      } else {
+      } else if (isAll) {
         renderAllSection();
+      } else if (isHighlights) {
+        updateHighlights();
       }
     };
 
@@ -1413,6 +1589,12 @@ $(function () {
     if (allButton) {
       allButton.addEventListener('click', function () {
         setView('all');
+      });
+    }
+
+    if (highlightsButton) {
+      highlightsButton.addEventListener('click', function () {
+        setView('highlights');
       });
     }
 
