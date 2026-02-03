@@ -2,3 +2,7 @@ data.js
 data.json
 *.sqlite
 .DS_Store
+*.sqlite-*
+frontend/.sass-cache/*
+frontend/covers/
+isbn_cache.json

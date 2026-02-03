@@ -2,6 +2,7 @@
 
 <html>
   <head>
+    <meta charset="utf-8">
     <title>Kobo Reading Stats</title>
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -12,9 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 
     <script src="js/bootstrap.min.js"></script>
-    <script src="js/heatmap.js"></script>
     <script src="js/punchcard.js"></script>
-    <script src="js/data.js"></script>
     <script src="js/main.js"></script>
 
   </head>
@@ -24,33 +23,52 @@
       <div class="row">
         <div class="col-xs-12">
           <h1>Reading Stats</h1>
+          <p class="lead">All books sorted by reading time, plus per-book and overall punchcards.</p>
         </div>
       </div>
 
       <div class="row">
-
-        <div class="col-xs-12">
-          <p>
-            Reading sessions
-          </p>
-
-          <div id="chart-one"></div>
+        <div class="col-md-5 col-sm-12">
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
+              <h3 class="panel-title">Books</h3>
+            </div>
+            <div class="panel-body">
+              <div id="book-list" class="book-list"></div>
+            </div>
+          </div>
         </div>
 
-
+        <div class="col-md-7 col-sm-12">
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
+              <h3 class="panel-title">Book details</h3>
+            </div>
+            <div class="panel-body">
+              <div id="book-detail" class="book-detail"></div>
+              <div class="section-title">Punchcard</div>
+              <div id="book-year-nav" class="year-nav"></div>
+              <div id="book-punchcard" class="punchcard"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="row">
-
         <div class="col-xs-12">
-          <p>
-            Punchcard
-          </p>
-
-          <div id="punchcard"></div>
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
+              <h3 class="panel-title">All reading sessions</h3>
+            </div>
+            <div class="panel-body">
+              <div id="all-year-nav" class="year-nav"></div>
+              <div id="all-punchcard" class="punchcard"></div>
+              <div class="section-title">Reading timeline</div>
+              <div id="timeline-date" class="timeline-date"></div>
+              <div id="timeline-chart" class="timeline-chart"></div>
+            </div>
+          </div>
         </div>
-
-
       </div>
     </div>
   </body>

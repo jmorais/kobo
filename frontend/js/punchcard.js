@@ -116,7 +116,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var innerWidth = this.innerWidth = width - margin.left - margin.right;
 	  var innerHeight = this.innerHeight = height - margin.top - margin.bottom;
 	  var unitWidth = this.unitWidth = innerWidth / 24;
-	  var unitHeight = this.unitHeight = innerHeight / 7;
+	  var unitHeight = this.unitHeight = innerHeight / this.yticks.length;
 
 	  this.unitSize = Math.min(unitWidth, unitHeight);
 
@@ -124,13 +124,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  this.x = d3.scaleLinear().domain([0, 23]).range([unitWidth / 2, innerWidth - unitWidth / 2]);
 
-	  this.y = d3.scaleLinear().domain([0, 6]).range([unitHeight / 2, innerHeight - unitHeight / 2]);
+	  this.y = d3.scaleLinear().domain([0, this.yticks.length - 1]).range([unitHeight / 2, innerHeight - unitHeight / 2]);
 
-	  this.xAxis = d3.axisBottom.scale(this.x).ticks(24).tickFormat(function (d, i) {
+	  this.xAxis = d3.axisBottom(this.x).ticks(24).tickFormat(function (d, i) {
 	    return _this.xticks[i];
 	  });
 
-	  this.yAxis = d3.axisLeft.scale(this.y).ticks(7).tickFormat(function (d, i) {
+	  this.yAxis = d3.axisLeft(this.y).ticks(this.yticks.length).tickFormat(function (d, i) {
 	    return _this.yticks[i];
 	  });
 
@@ -144,8 +144,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @public
 	 */
 	proto.render = function (data) {
+	  var maxY = this.yticks.length - 1;
 	  data = (data || []).filter(function (d) {
-	    return Array.isArray(d) && d.length === 3 && d[0] >= 0 && d[0] <= 6 && d[1] >= 0 && d[1] <= 23;
+	    return Array.isArray(d) && d.length === 3 && d[0] >= 0 && d[0] <= maxY && d[1] >= 0 && d[1] <= 23;
 	  });
 
 	  this.data = data;
@@ -176,7 +177,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return d[2];
 	  });
 
-	  this.r = d3.scale.sqrt().domain([0, maxVal]).range([0, this.unitSize / 2]);
+	  this.r = d3.scaleSqrt().domain([0, maxVal]).range([0, this.unitSize / 2]);
 
 	  var circles = this.chart.selectAll('circle').data(data);
 
