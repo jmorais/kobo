@@ -79,6 +79,16 @@
         <div class="col-xs-12">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading">
+              <h3 class="panel-title">General Stats</h3>
+            </div>
+            <div class="panel-body">
+              <div id="general-stats" class="general-stats"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-12">
+          <div class="panel panel-default panel-soft">
+            <div class="panel-heading">
               <h3 class="panel-title">All reading sessions</h3>
             </div>
             <div class="panel-body">
@@ -86,18 +96,18 @@
               <div id="all-punchcard" class="punchcard"></div>
               <div class="section-title">Books read this year</div>
               <div id="year-books" class="year-books"></div>
-              <div id="timeline-modal" class="timeline-modal" aria-hidden="true">
-                <div class="timeline-backdrop"></div>
-                <div class="timeline-popup" role="dialog" aria-modal="true" aria-labelledby="timeline-title">
-                  <button class="timeline-close" type="button" aria-label="Close">×</button>
-                  <div class="section-title" id="timeline-title">Reading timeline</div>
-                  <div id="timeline-date" class="timeline-date"></div>
-                  <div id="timeline-chart" class="timeline-chart"></div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    <div id="timeline-modal" class="timeline-modal" aria-hidden="true">
+      <div class="timeline-backdrop"></div>
+      <div class="timeline-popup" role="dialog" aria-modal="true" aria-labelledby="timeline-title">
+        <button class="timeline-close" type="button" aria-label="Close">×</button>
+        <div class="section-title" id="timeline-title">Reading timeline</div>
+        <div id="timeline-date" class="timeline-date"></div>
+        <div id="timeline-chart" class="timeline-chart"></div>
       </div>
     </div>
   </body>

@@ -134,6 +134,82 @@ function formatDurationLabel(totalMinutes) {
   return duration.hours + 'h ' + duration.minutes + 'm';
 }
 
+function periodForHour(hour) {
+  if (hour >= 5 && hour < 12) {
+    return 'Morning';
+  }
+  if (hour >= 12 && hour < 17) {
+    return 'Afternoon';
+  }
+  if (hour >= 17 && hour < 21) {
+    return 'Evening';
+  }
+  return 'Night';
+}
+
+function computeGeneralStats(books, sessions, minMinutes) {
+  var threshold = (minMinutes || 10) * 60;
+  var totalMinutes = 0;
+  var sessionCount = 0;
+  var longestMinutes = 0;
+  var longestBookTitle = null;
+  var periodTotals = { Morning: 0, Afternoon: 0, Evening: 0, Night: 0 };
+
+  sessions.forEach(function (session) {
+    var durationSeconds = (session.end - session.start) / 1000;
+    if (durationSeconds < threshold) {
+      return;
+    }
+    var minutes = durationSeconds / 60;
+    totalMinutes += minutes;
+    sessionCount += 1;
+    if (minutes > longestMinutes) {
+      longestMinutes = minutes;
+      longestBookTitle = session.bookTitle || 'Untitled';
+    }
+
+    var period = periodForHour(session.start.getHours());
+    periodTotals[period] += minutes;
+  });
+
+  var averageMinutes = sessionCount > 0 ? (totalMinutes / sessionCount) : 0;
+  var preferredPeriod = Object.keys(periodTotals).reduce(function (best, period) {
+    if (!best || periodTotals[period] > periodTotals[best]) {
+      return period;
+    }
+    return best;
+  }, null) || 'n/a';
+
+  var totalPageTurns = books.reduce(function (sum, book) {
+    return sum + (book.page_turns || 0);
+  }, 0);
+
+  return {
+    totalMinutes: totalMinutes,
+    sessionCount: sessionCount,
+    averageMinutes: averageMinutes,
+    longestMinutes: longestMinutes,
+    longestBookTitle: longestBookTitle || 'n/a',
+    totalPageTurns: totalPageTurns,
+    preferredPeriod: preferredPeriod
+  };
+}
+
+function renderGeneralStats(containerId, stats) {
+  var container = document.getElementById(containerId);
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML =
+    '<div class="general-stat"><span>Total reading time</span><strong>' + formatDurationLabel(stats.totalMinutes) + '</strong></div>' +
+    '<div class="general-stat"><span>Total sessions</span><strong>' + stats.sessionCount + '</strong></div>' +
+    '<div class="general-stat"><span>Average session time</span><strong>' + formatDurationLabel(stats.averageMinutes) + '</strong></div>' +
+    '<div class="general-stat"><span>Longest session</span><strong>' + formatDurationLabel(stats.longestMinutes) + '</strong><em class="general-stat-sub">' + stats.longestBookTitle + '</em></div>' +
+    '<div class="general-stat"><span>Total page turns</span><strong>' + stats.totalPageTurns + '</strong></div>' +
+    '<div class="general-stat"><span>Preferred period</span><strong>' + stats.preferredPeriod + '</strong></div>';
+}
+
 function getDayTooltip() {
   var tooltip = d3.select('body').select('.day-tooltip');
   if (!tooltip.empty()) {
@@ -946,6 +1022,7 @@ $(function () {
     };
 
     renderAllSection();
+    renderGeneralStats('general-stats', computeGeneralStats(library.books, allSessions, 10));
     renderBookSection();
     closeTimelineModal();
 
@@ -967,6 +1044,19 @@ $(function () {
       }
       if (allButton) {
         allButton.classList.toggle('active', !isByBook);
+      }
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(function () {
+          if (isByBook) {
+            renderBookSection();
+          } else {
+            renderAllSection();
+          }
+        });
+      } else if (isByBook) {
+        renderBookSection();
+      } else {
+        renderAllSection();
       }
     };
 

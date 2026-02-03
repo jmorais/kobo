@@ -1,0 +1,29 @@
+.general-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.general-stat {
+  background: #fff;
+  border: 1px solid #eef1f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 12px;
+
+  strong {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .general-stat-sub {
+    color: #4b5563;
+    font-size: 12px;
+    font-style: normal;
+  }
+}
