@@ -56,10 +56,6 @@ class Library
       end
     end
 
-    @books.each do |book|
-      computed = calculate_overall_percent_read(book.id)
-      book.percent_read = computed if computed
-    end
 
     @books.each do |book|
       @database.execute "SELECT EventType, ExtraData, EventCount FROM Event WHERE ContentID = ? AND EventType IN (46, 1020, 1021)", book.id do |event|
@@ -131,53 +127,6 @@ class Library
   def content_column_name(name)
     name_downcase = name.to_s.downcase
     content_columns.find { |column| column.to_s.downcase == name_downcase }
-  end
-
-  def chapter_link_column
-    return @chapter_link_column if defined?(@chapter_link_column)
-
-    @chapter_link_column = if content_column_name('BookID')
-      content_column_name('BookID')
-    elsif content_column_name('VolumeID')
-      content_column_name('VolumeID')
-    elsif content_column_name('ParentContentID')
-      content_column_name('ParentContentID')
-    else
-      nil
-    end
-  end
-
-  def calculate_overall_percent_read(book_id)
-    link_column = chapter_link_column
-    return nil unless link_column
-
-    rows = @database.execute(
-      "SELECT ___FileOffset, ___FileSize, ___PercentRead FROM content WHERE ContentType = 9 AND #{link_column} = ?",
-      book_id
-    )
-
-    return nil if rows.empty?
-
-    max_percent = nil
-
-    rows.each do |row|
-      offset = row[0].to_f
-      size = row[1].to_f
-      percent = row[2]
-      next if percent.nil?
-
-      percent = percent.to_f
-      contribution = offset + (size * percent / 100.0)
-
-      max_percent = contribution if max_percent.nil? || contribution > max_percent
-    end
-
-    return nil if max_percent.nil?
-
-    normalized = max_percent.round(0).to_i
-    [[normalized, 0].max, 100].min
-  rescue SQLite3::SQLException
-    nil
   end
 
   def normalize_percent_read(value)

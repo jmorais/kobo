@@ -47,11 +47,43 @@ function calculateReadingTime(book) {
   return Math.round((seconds / 3600) * 10) / 10;
 }
 
+function countReadingSessions(book, minMinutes) {
+  var sessions = safeSessions(book);
+  var minSeconds = (minMinutes || 10) * 60;
+  return sessions.reduce(function (total, session) {
+    var start = Date.parse(session[0]);
+    var end = Date.parse(session[1]);
+    if (!isNaN(start) && !isNaN(end) && (end - start) / 1000 >= minSeconds) {
+      total += 1;
+    }
+    return total;
+  }, 0);
+}
+
 function formatHours(hours) {
   if (!hours || isNaN(hours)) {
     return '0.0';
   }
   return hours.toFixed(1);
+}
+
+function formatHoursAndMinutes(hours) {
+  if (!hours || isNaN(hours)) {
+    return '';
+  }
+  var totalMinutes = Math.round(hours * 60);
+  var wholeHours = Math.floor(totalMinutes / 60);
+  var minutes = totalMinutes % 60;
+  if (wholeHours === 0 && minutes === 0) {
+    return '';
+  }
+  if (wholeHours === 0) {
+    return minutes + 'm';
+  }
+  if (minutes === 0) {
+    return wholeHours + 'h';
+  }
+  return wholeHours + 'h ' + minutes + 'm';
 }
 
 function formatLocalDate(date) {
@@ -86,6 +118,20 @@ function formatDuration(totalMinutes) {
     minutes: minutes,
     label: hours + 'h ' + minutes + 'm'
   };
+}
+
+function formatDurationLabel(totalMinutes) {
+  var duration = formatDuration(totalMinutes);
+  if (duration.hours === 0 && duration.minutes === 0) {
+    return '0m';
+  }
+  if (duration.hours === 0) {
+    return duration.minutes + 'm';
+  }
+  if (duration.minutes === 0) {
+    return duration.hours + 'h';
+  }
+  return duration.hours + 'h ' + duration.minutes + 'm';
 }
 
 function getDayTooltip() {
@@ -276,10 +322,11 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
 
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var weekSlots = 6;
-  var margin = { top: 20, right: 20, bottom: 40, left: 90 };
-  var width = Math.max(container.clientWidth, 720);
+  var margin = { top: 20, right: 0, bottom: 40, left: 40 };
+  var width = container.clientWidth || 720;
   var height = 320;
   var innerWidth = width - margin.left - margin.right;
   var innerHeight = height - margin.top - margin.bottom;
@@ -313,7 +360,10 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
     .range([2, Math.min(xScale.bandwidth() / weekSlots, yScale.bandwidth()) * 0.45]);
 
   var xAxis = d3.axisBottom(xScale);
-  var yAxis = d3.axisLeft(yScale);
+  var yAxis = d3.axisLeft(yScale).tickFormat(function (value) {
+    var index = days.indexOf(value);
+    return dayLabels[index] || value;
+  });
 
   chart.append('g')
     .attr('class', 'axis axis-x')
@@ -350,17 +400,19 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
         return;
       }
 
-      var duration = formatDuration(entry.totalMinutes);
+      var durationLabel = formatDurationLabel(entry.totalMinutes);
       var date = entry.date;
       var dateLabel = days[date.getDay()] + ', ' + formatOrdinal(date.getDate()) + ' of ' + monthNames[date.getMonth()];
-      var headline = duration.label + ' of reading on ' + dateLabel;
+      var headline = durationLabel + ' of reading on ' + dateLabel;
       var sessionsForDay = (sessionsByDate && sessionsByDate[d.dateKey]) || [];
       var bookTitles = Array.from(new Set(sessionsForDay.map(function (session) {
         return session.bookTitle;
       }))).sort();
+      var sessionCount = sessionsForDay.length;
 
       tooltip.html(
         '<div class="tooltip-title">' + headline + '</div>' +
+        '<div class="tooltip-meta">' + sessionCount + ' session' + (sessionCount === 1 ? '' : 's') + '</div>' +
         (bookTitles.length ? '<div class="tooltip-subtitle">Books read</div>' : '') +
         (bookTitles.length ? '<ul>' + bookTitles.map(function (title) {
           return '<li>' + title + '</li>';
@@ -387,15 +439,26 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
     });
 }
 
-function renderTimeline(targetId, labelId, dateKey, sessionsByDate) {
+function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   var container = document.getElementById(targetId);
   var label = document.getElementById(labelId);
+  var modal = document.getElementById('timeline-modal');
+  var title = document.getElementById('timeline-title');
   if (!container || !label) {
     return;
   }
 
+  var config = options || {};
+  if (title) {
+    title.textContent = config.title || 'Reading timeline';
+  }
+
   container.innerHTML = '';
   label.textContent = dateKey ? dateKey : 'Select a day to see sessions.';
+  if (modal) {
+    modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('is-open');
+  }
 
   if (!dateKey || !sessionsByDate[dateKey] || !sessionsByDate[dateKey].length) {
     container.innerHTML = '<div class="empty">No reading sessions for this day.</div>';
@@ -406,7 +469,7 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate) {
   var books = Array.from(new Set(sessions.map(function (session) { return session.bookTitle; })));
   books.sort();
 
-  var margin = { top: 10, right: 20, bottom: 40, left: 160 };
+  var margin = { top: 10, right: 20, bottom: 40, left: config.hideYAxis ? 30 : 160 };
   var width = Math.max(container.clientWidth, 720);
   var rowHeight = 28;
   var height = Math.max(220, margin.top + margin.bottom + books.length * rowHeight);
@@ -441,9 +504,11 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate) {
     .attr('transform', 'translate(0,' + innerHeight + ')')
     .call(xAxis);
 
-  chart.append('g')
-    .attr('class', 'axis axis-y')
-    .call(yAxis);
+  if (!config.hideYAxis) {
+    chart.append('g')
+      .attr('class', 'axis axis-y')
+      .call(yAxis);
+  }
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(books);
 
@@ -469,6 +534,15 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate) {
     .attr('opacity', 0.8);
 }
 
+function closeTimelineModal() {
+  var modal = document.getElementById('timeline-modal');
+  if (!modal) {
+    return;
+  }
+  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.remove('is-open');
+}
+
 function renderBookList(books, selectedId) {
   var list = document.getElementById('book-list');
   if (!list) {
@@ -487,18 +561,77 @@ function renderBookList(books, selectedId) {
     link.className = 'book-item' + (book.id === selectedId ? ' active' : '');
     link.href = '#book=' + encodeURIComponent(book.id);
 
+    var cover = document.createElement('div');
+    cover.className = 'book-item-cover';
+
+    if (book.image_id) {
+      var img = document.createElement('img');
+      img.alt = (book.title || 'Book cover');
+      img.src = './covers/' + book.image_id + ' - N3_FULL.jpg';
+      img.onerror = function () {
+        cover.innerHTML = '<div class="cover-fallback small">No cover</div>';
+      };
+      cover.appendChild(img);
+    } else {
+      cover.innerHTML = '<div class="cover-fallback small">No cover</div>';
+    }
+
     var title = document.createElement('div');
     title.className = 'book-title';
     title.textContent = book.title || 'Untitled';
 
     var meta = document.createElement('div');
     meta.className = 'book-meta';
-    meta.textContent = (book.author || 'Unknown author') + ' • ' + formatHours(book._reading_time) + ' h';
+    var timeLabel = formatHoursAndMinutes(book._reading_time);
+    var sessionCount = book._session_count || 0;
+    var sessionLabel = sessionCount > 0 ? sessionCount + ' sessions' : '';
+    var metaBits = [timeLabel, sessionLabel].filter(Boolean).join(' • ');
+    meta.textContent = metaBits
+      ? (book.author || 'Unknown author') + ' • ' + metaBits
+      : (book.author || 'Unknown author');
 
-    link.appendChild(title);
-    link.appendChild(meta);
+    var textBlock = document.createElement('div');
+    textBlock.className = 'book-item-text';
+    textBlock.appendChild(title);
+    textBlock.appendChild(meta);
+
+    link.appendChild(cover);
+    link.appendChild(textBlock);
     list.appendChild(link);
   });
+}
+
+function filterBooks(books, query) {
+  var term = query.toLowerCase().trim();
+  if (!term) {
+    return books;
+  }
+  return books.filter(function (book) {
+    var title = (book.title || '').toLowerCase();
+    var author = (book.author || '').toLowerCase();
+    var series = (book.series || '').toLowerCase();
+    return title.includes(term) || author.includes(term) || series.includes(term);
+  });
+}
+
+function sortBooks(books, mode) {
+  var sorted = books.slice();
+  if (mode === 'title') {
+    sorted.sort(function (a, b) {
+      return (a.title || '').localeCompare(b.title || '');
+    });
+    return sorted;
+  }
+  if (mode === 'author') {
+    sorted.sort(function (a, b) {
+      return (a.author || '').localeCompare(b.author || '');
+    });
+    return sorted;
+  }
+  sorted.sort(function (a, b) {
+    return (b._reading_time || 0) - (a._reading_time || 0);
+  });
+  return sorted;
 }
 
 function renderBookDetail(book) {
@@ -535,21 +668,53 @@ function renderBookDetail(book) {
 
   var headerText = document.createElement('div');
   headerText.className = 'book-header-text';
+  var seriesLine = '';
+  if (book.series) {
+    var seriesNumber = book.series_number ? (' #' + book.series_number) : '';
+    seriesLine = '<div class="book-series">' + book.series + seriesNumber + '</div>';
+  }
   headerText.innerHTML = '<h2>' + (book.title || 'Untitled') + '</h2>' +
-    '<div class="book-subtitle">' + (book.author || 'Unknown author') + '</div>';
+    '<div class="book-subtitle">' + (book.author || 'Unknown author') + '</div>' +
+    seriesLine;
 
   header.appendChild(cover);
   header.appendChild(headerText);
 
+  var percentValue = book.percent_read != null ? Math.max(0, Math.min(100, Number(book.percent_read))) : null;
+  var donut = document.createElement('div');
+  donut.className = 'percent-donut';
+  donut.innerHTML =
+    '<div class="donut" style="--p:' + (percentValue != null ? percentValue : 0) + ';">' +
+    '<span>' + (percentValue != null ? percentValue + '%' : 'n/a') + '</span>' +
+    '</div>' +
+    '<div class="donut-label">Percent read</div>';
+
+  header.appendChild(donut);
+
   var stats = document.createElement('div');
   stats.className = 'book-stats';
-  stats.innerHTML =
-    '<div><strong>Total read time:</strong> ' + formatHours(book._reading_time) + ' h</div>' +
-    '<div><strong>Read status:</strong> ' + (book.read_status || 'Unknown') + '</div>' +
-    '<div><strong>Percent read:</strong> ' + (book.percent_read != null ? book.percent_read + '%' : 'n/a') + '</div>' +
-    '<div><strong>Page turns:</strong> ' + (book.page_turns != null ? book.page_turns : 'n/a') + '</div>' +
-    '<div><strong>Series:</strong> ' + (book.series || 'n/a') + '</div>' +
-    '<div><strong>Series number:</strong> ' + (book.series_number || 'n/a') + '</div>';
+
+  var metrics = document.createElement('div');
+  metrics.className = 'book-metrics';
+  var statusText = (book.read_status || 'Unknown');
+  var statusClass = 'status-unknown';
+  if (statusText === 'Unread') {
+    statusClass = 'status-unread';
+  } else if (statusText === 'Reading') {
+    statusClass = 'status-reading';
+  } else if (statusText === 'Finished') {
+    statusClass = 'status-finished';
+  }
+  var totalTimeLabel = formatHoursAndMinutes(book._reading_time);
+  var totalTimeRow = totalTimeLabel
+    ? '<div><strong>Total read time:</strong> ' + totalTimeLabel + '</div>'
+    : '';
+  metrics.innerHTML =
+    totalTimeRow +
+    '<div><strong>Read status:</strong> <span class="status-badge ' + statusClass + '">' + statusText + '</span></div>' +
+    '<div><strong>Page turns:</strong> ' + (book.page_turns != null ? book.page_turns : 'n/a') + '</div>';
+
+  stats.appendChild(metrics);
 
   detail.appendChild(header);
   detail.appendChild(stats);
@@ -584,6 +749,7 @@ $(function () {
 
     library.books = library.books.map(function (book) {
       book._reading_time = calculateReadingTime(book);
+      book._session_count = countReadingSessions(book, 10);
       return book;
     });
 
@@ -596,8 +762,58 @@ $(function () {
       return book.id === selectedId;
     });
 
-    renderBookList(library.books, selectedId);
-    renderBookDetail(selectedBook);
+    var bookSearchInput = document.getElementById('book-search');
+    var bookSortSelect = document.getElementById('book-sort');
+    var currentQuery = '';
+    var currentSort = 'time';
+    var filteredBooks = library.books.slice();
+
+    var updateBookList = function () {
+      filteredBooks = filterBooks(library.books, currentQuery);
+      filteredBooks = sortBooks(filteredBooks, currentSort);
+      var activeId = selectedBook && filteredBooks.some(function (book) { return book.id === selectedBook.id; })
+        ? selectedBook.id
+        : (filteredBooks[0] && filteredBooks[0].id);
+
+      if (activeId) {
+        selectedBook = filteredBooks.find(function (book) { return book.id === activeId; }) || selectedBook;
+      }
+
+      renderBookList(filteredBooks, activeId);
+      renderBookDetail(selectedBook);
+      if (typeof renderBookSection === 'function') {
+        renderBookSection();
+      }
+    };
+
+    if (bookSearchInput) {
+      bookSearchInput.addEventListener('input', function (event) {
+        currentQuery = event.target.value || '';
+        updateBookList();
+      });
+    }
+
+    if (bookSortSelect) {
+      bookSortSelect.addEventListener('change', function (event) {
+        currentSort = event.target.value || 'time';
+        updateBookList();
+      });
+    }
+
+    document.addEventListener('keydown', function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        if (bookSearchInput) {
+          bookSearchInput.focus();
+          bookSearchInput.select();
+        }
+      }
+      if (event.key === 'Escape') {
+        closeTimelineModal();
+      }
+    });
+
+    updateBookList();
 
     var allSessions = collectSessions(library.books);
     var sessionsByDate = buildSessionsByDate(allSessions);
@@ -606,15 +822,32 @@ $(function () {
     var selectedBookYear = null;
     var selectedDateKey = null;
 
-    var handleDayClick = function (dateKey) {
+    var handleDayClickAll = function (dateKey) {
       selectedDateKey = dateKey;
-      renderTimeline('timeline-chart', 'timeline-date', dateKey, sessionsByDate);
-      renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClick);
+      renderTimeline('timeline-chart', 'timeline-date', dateKey, sessionsByDate, {
+        title: 'Reading timeline',
+        hideYAxis: false
+      });
+      renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClickAll);
       if (selectedBook) {
         var bookSessions = collectSessions([selectedBook]);
         var bookSessionsByDate = buildSessionsByDate(bookSessions);
-        renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClick);
+        renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClickBook);
       }
+    };
+
+    var handleDayClickBook = function (dateKey) {
+      selectedDateKey = dateKey;
+      if (selectedBook) {
+        var bookSessions = collectSessions([selectedBook]);
+        var bookSessionsByDate = buildSessionsByDate(bookSessions);
+        renderTimeline('timeline-chart', 'timeline-date', dateKey, bookSessionsByDate, {
+          title: 'Reading timeline for ' + (selectedBook.title || 'Untitled'),
+          hideYAxis: true
+        });
+        renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClickBook);
+      }
+      renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClickAll);
     };
 
     var renderAllSection = function () {
@@ -622,7 +855,7 @@ $(function () {
         selectedAllYear = year;
         renderAllSection();
       });
-      renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClick);
+      renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClickAll);
     };
 
     var renderBookSection = function () {
@@ -644,12 +877,12 @@ $(function () {
       });
 
       var bookSessionsByDate = buildSessionsByDate(bookSessions);
-      renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClick);
+      renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClickBook);
     };
 
     renderAllSection();
     renderBookSection();
-    renderTimeline('timeline-chart', 'timeline-date', selectedDateKey, sessionsByDate);
+    closeTimelineModal();
 
     $(window).on('hashchange', function () {
       var newSelectedId = getSelectedId();
@@ -657,11 +890,21 @@ $(function () {
         return book.id === newSelectedId;
       });
 
-      renderBookList(library.books, newSelectedId);
       selectedBook = newSelectedBook;
       selectedBookYear = null;
-      renderBookDetail(newSelectedBook);
-      renderBookSection();
+      updateBookList();
     });
+
+    var timelineModal = document.getElementById('timeline-modal');
+    if (timelineModal) {
+      var closeButton = timelineModal.querySelector('.timeline-close');
+      var backdrop = timelineModal.querySelector('.timeline-backdrop');
+      if (closeButton) {
+        closeButton.addEventListener('click', closeTimelineModal);
+      }
+      if (backdrop) {
+        backdrop.addEventListener('click', closeTimelineModal);
+      }
+    }
   });
 });

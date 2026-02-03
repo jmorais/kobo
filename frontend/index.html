@@ -34,6 +34,18 @@
               <h3 class="panel-title">Books</h3>
             </div>
             <div class="panel-body">
+              <div class="book-controls">
+                <div class="book-search">
+                  <input id="book-search" class="form-control" type="search" placeholder="Search books..." autocomplete="off">
+                </div>
+                <div class="book-sort">
+                  <select id="book-sort" class="form-control">
+                    <option value="time" selected>Sort by read time</option>
+                    <option value="title">Sort by title</option>
+                    <option value="author">Sort by author</option>
+                  </select>
+                </div>
+              </div>
               <div id="book-list" class="book-list"></div>
             </div>
           </div>
@@ -63,9 +75,15 @@
             <div class="panel-body">
               <div id="all-year-nav" class="year-nav"></div>
               <div id="all-punchcard" class="punchcard"></div>
-              <div class="section-title">Reading timeline</div>
-              <div id="timeline-date" class="timeline-date"></div>
-              <div id="timeline-chart" class="timeline-chart"></div>
+              <div id="timeline-modal" class="timeline-modal" aria-hidden="true">
+                <div class="timeline-backdrop"></div>
+                <div class="timeline-popup" role="dialog" aria-modal="true" aria-labelledby="timeline-title">
+                  <button class="timeline-close" type="button" aria-label="Close">×</button>
+                  <div class="section-title" id="timeline-title">Reading timeline</div>
+                  <div id="timeline-date" class="timeline-date"></div>
+                  <div id="timeline-chart" class="timeline-chart"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

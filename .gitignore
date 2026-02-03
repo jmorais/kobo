@@ -6,3 +6,4 @@ data.json
 frontend/.sass-cache/*
 frontend/covers/
 isbn_cache.json
+frontend/css
