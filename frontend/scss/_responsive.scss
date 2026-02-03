@@ -1,0 +1,21 @@
+@media (max-width: 992px) {
+  .book-list {
+    max-height: none;
+  }
+
+  .punchcard {
+    min-height: 260px;
+  }
+
+  .timeline-chart {
+    min-height: 220px;
+  }
+
+  .book-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .year-books {
+    grid-template-columns: 1fr;
+  }
+}

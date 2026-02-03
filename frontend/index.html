@@ -28,6 +28,15 @@
       </div>
 
       <div class="row">
+        <div class="col-xs-12">
+          <div class="view-toggle" role="group" aria-label="View selector">
+            <button id="view-by-book" class="view-button active" type="button">By Book</button>
+            <button id="view-all" class="view-button" type="button">All</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="by-book-section" class="row row-equal">
         <div class="col-md-5 col-sm-12">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading">
@@ -66,7 +75,7 @@
         </div>
       </div>
 
-      <div class="row">
+      <div id="all-section" class="row" hidden>
         <div class="col-xs-12">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading">
@@ -75,6 +84,8 @@
             <div class="panel-body">
               <div id="all-year-nav" class="year-nav"></div>
               <div id="all-punchcard" class="punchcard"></div>
+              <div class="section-title">Books read this year</div>
+              <div id="year-books" class="year-books"></div>
               <div id="timeline-modal" class="timeline-modal" aria-hidden="true">
                 <div class="timeline-backdrop"></div>
                 <div class="timeline-popup" role="dialog" aria-modal="true" aria-labelledby="timeline-title">

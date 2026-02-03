@@ -158,11 +158,75 @@ function collectSessions(books) {
         start: start,
         end: end,
         bookId: book.id,
-        bookTitle: book.title || 'Untitled'
+        bookTitle: book.title || 'Untitled',
+        bookImageId: book.image_id || null
       });
     });
   });
   return sessions;
+}
+
+function computeBookMinutesByYear(sessions, year) {
+  var yearStart = new Date(year, 0, 1);
+  var yearEnd = new Date(year + 1, 0, 1);
+  var totals = {};
+
+  sessions.forEach(function (session) {
+    var segmentStart = session.start > yearStart ? session.start : yearStart;
+    var segmentEnd = session.end < yearEnd ? session.end : yearEnd;
+    if (segmentEnd <= segmentStart) {
+      return;
+    }
+    var minutes = (segmentEnd - segmentStart) / 60000;
+    if (!totals[session.bookId]) {
+      totals[session.bookId] = {
+        bookId: session.bookId,
+        title: session.bookTitle,
+        imageId: session.bookImageId,
+        minutes: 0
+      };
+    }
+    totals[session.bookId].minutes += minutes;
+  });
+
+  return Object.keys(totals).map(function (key) {
+    return totals[key];
+  });
+}
+
+function renderYearBookList(containerId, sessions, year) {
+  var container = document.getElementById(containerId);
+  if (!container) {
+    return;
+  }
+
+  var totals = computeBookMinutesByYear(sessions, year)
+    .filter(function (entry) {
+      return entry.minutes > 0;
+    })
+    .sort(function (a, b) {
+      return b.minutes - a.minutes;
+    });
+
+  if (!totals.length) {
+    container.innerHTML = '<div class="empty">No reading sessions for this year.</div>';
+    return;
+  }
+
+  container.innerHTML = totals.map(function (entry) {
+    var coverHtml = entry.imageId
+      ? '<img src="./covers/' + entry.imageId + ' - N3_FULL.jpg" alt="' + entry.title + '">'
+      : '<div class="cover-fallback small">No cover</div>';
+    return (
+      '<div class="year-book-item">' +
+        '<div class="year-book-cover">' + coverHtml + '</div>' +
+        '<div class="year-book-info">' +
+          '<div class="year-book-title">' + entry.title + '</div>' +
+          '<div class="year-book-meta">' + formatDurationLabel(entry.minutes) + '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
 }
 
 function getAvailableYears(sessions) {
@@ -856,6 +920,7 @@ $(function () {
         renderAllSection();
       });
       renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClickAll);
+      renderYearBookList('year-books', allSessions, selectedAllYear);
     };
 
     var renderBookSection = function () {
@@ -883,6 +948,41 @@ $(function () {
     renderAllSection();
     renderBookSection();
     closeTimelineModal();
+
+    var byBookButton = document.getElementById('view-by-book');
+    var allButton = document.getElementById('view-all');
+    var byBookSection = document.getElementById('by-book-section');
+    var allSection = document.getElementById('all-section');
+
+    var setView = function (view) {
+      var isByBook = view === 'book';
+      if (byBookSection) {
+        byBookSection.hidden = !isByBook;
+      }
+      if (allSection) {
+        allSection.hidden = isByBook;
+      }
+      if (byBookButton) {
+        byBookButton.classList.toggle('active', isByBook);
+      }
+      if (allButton) {
+        allButton.classList.toggle('active', !isByBook);
+      }
+    };
+
+    if (byBookButton) {
+      byBookButton.addEventListener('click', function () {
+        setView('book');
+      });
+    }
+
+    if (allButton) {
+      allButton.addEventListener('click', function () {
+        setView('all');
+      });
+    }
+
+    setView('book');
 
     $(window).on('hashchange', function () {
       var newSelectedId = getSelectedId();

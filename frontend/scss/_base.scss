@@ -1,0 +1,61 @@
+body, html {
+  width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  height: 100%;
+  color: #14171a;
+  font: 14px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #f6f7fb;
+}
+
+#main-container {
+  padding: 40px 0;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 4.2rem;
+  line-height: 4.5rem;
+  letter-spacing: -.02rem;
+  margin: 0 0 10px;
+}
+
+p.lead {
+  font-weight: 300;
+  font-size: 1.6rem;
+  color: #6b7280;
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin: 10px 0;
+}
+
+.axis text {
+  font-size: 11px;
+  fill: #6b7280;
+}
+
+.axis line,
+.axis path {
+  stroke: #e5e7eb;
+}
+
+.empty {
+  padding: 18px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px dashed #e5e7eb;
+  color: #9ca3af;
+  text-align: center;
+}
