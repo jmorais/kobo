@@ -1,0 +1,41 @@
+@import "variables";
+
+body, html {
+  width: 100%;
+}
+
+body {
+  height: 100%;
+  color: #14171a;
+  font: 12px/2 Helvetica,Arial,sans-serif;
+}
+
+#main-container {
+  padding-top: 50px;
+}
+
+h1 {
+  font-weight: 700;
+  font-size: 5rem;
+  line-height: 5rem;
+  letter-spacing: -.025rem;
+  margin: 0;
+  padding: 0;
+  max-width: 70%;
+  margin-bottom: 5rem;
+}
+
+p {
+  font-weight: 300;
+  font-size: 2rem;
+  line-height: 2rem;
+  letter-spacing: .015rem;
+  margin: 2rem 0;
+  margin-bottom: 0;
+  padding: 0;
+  color: #86898e;
+  line-height: 1.5em;
+}
+
+
+@import "heatmap";

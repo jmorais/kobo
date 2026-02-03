@@ -1,0 +1,4 @@
+data.js
+data.json
+*.sqlite
+.DS_Store
