@@ -33,6 +33,8 @@ class Library
       'ContentType'
     ]
 
+    book_id_column = content_column_name('bookid')
+
     image_id_index = nil
     image_id_column = content_column_name('imageid')
     if image_id_column
@@ -50,6 +52,7 @@ class Library
         percent_read = normalize_percent_read(book[3])
         entry = Book.new(book[0], book[1], book[2], percent_read, book[4], book[5], book[6])
         entry.image_id = image_id_index ? book[image_id_index] : nil
+        entry.chapters = book_id_column ? count_chapters(entry.id, book_id_column) : 0
         @books << entry
       rescue IOError => e
         puts e.message
@@ -127,6 +130,17 @@ class Library
   def content_column_name(name)
     name_downcase = name.to_s.downcase
     content_columns.find { |column| column.to_s.downcase == name_downcase }
+  end
+
+  def count_chapters(book_id, book_id_column)
+    return 0 unless book_id_column
+
+    @database.get_first_value(
+      "SELECT COUNT(*) FROM content WHERE ContentType = 9 AND #{book_id_column} = ?",
+      book_id
+    ).to_i
+  rescue SQLite3::SQLException
+    0
   end
 
   def normalize_percent_read(value)

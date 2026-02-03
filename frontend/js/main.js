@@ -134,6 +134,42 @@ function formatDurationLabel(totalMinutes) {
   return duration.hours + 'h ' + duration.minutes + 'm';
 }
 
+function wrapSvgText(selection, width) {
+  selection.each(function () {
+    var text = d3.select(this);
+    var words = text.text().split(/\s+/).filter(Boolean).reverse();
+    var line = [];
+    var lineNumber = 0;
+    var lineHeight = 1.1;
+    var x = text.attr('x');
+    var y = text.attr('y');
+    var dy = parseFloat(text.attr('dy')) || 0;
+
+    text.text(null);
+    var tspan = text.append('tspan')
+      .attr('x', x)
+      .attr('y', y)
+      .attr('dy', dy + 'em');
+
+    var word;
+    while (words.length) {
+      word = words.pop();
+      line.push(word);
+      tspan.text(line.join(' '));
+      if (tspan.node().getComputedTextLength() > width && line.length > 1) {
+        line.pop();
+        tspan.text(line.join(' '));
+        line = [word];
+        tspan = text.append('tspan')
+          .attr('x', x)
+          .attr('y', y)
+          .attr('dy', (++lineNumber * lineHeight + dy) + 'em')
+          .text(word);
+      }
+    }
+  });
+}
+
 function periodForHour(hour) {
   if (hour >= 5 && hour < 12) {
     return 'Morning';
@@ -145,6 +181,32 @@ function periodForHour(hour) {
     return 'Evening';
   }
   return 'Night';
+}
+
+function collectReadingDays(sessions) {
+  var days = {};
+  sessions.forEach(function (session) {
+    var start = new Date(session.start.getFullYear(), session.start.getMonth(), session.start.getDate());
+    var end = new Date(session.end.getFullYear(), session.end.getMonth(), session.end.getDate());
+    if (end < start) {
+      return;
+    }
+    var current = new Date(start);
+    while (current <= end) {
+      days[formatLocalDate(current)] = true;
+      current.setDate(current.getDate() + 1);
+    }
+  });
+  return Object.keys(days).sort();
+}
+
+function formatDayCount(value) {
+  if (value === null || value === undefined) {
+    return 'n/a';
+  }
+  var rounded = Math.round(value * 10) / 10;
+  var label = (rounded % 1 === 0) ? rounded.toFixed(0) : rounded.toFixed(1);
+  return label + ' days';
 }
 
 function computeGeneralStats(books, sessions, minMinutes) {
@@ -184,6 +246,54 @@ function computeGeneralStats(books, sessions, minMinutes) {
     return sum + (book.page_turns || 0);
   }, 0);
 
+  var totalBooks = books.length;
+  var finishedBooks = books.filter(function (book) {
+    return book.read_status === 'Finished';
+  }).length;
+  var libraryCompletion = totalBooks > 0 ? Math.round((finishedBooks / totalBooks) * 100) : 0;
+  var libraryCompletionText = finishedBooks + ' books of ' + totalBooks + ' in the library';
+
+  var readingDays = collectReadingDays(sessions);
+  var longestStreak = 0;
+  var currentStreak = 0;
+  var totalGapDays = 0;
+  var gapCount = 0;
+  if (readingDays.length > 0) {
+    var streak = 1;
+    for (var i = 1; i < readingDays.length; i += 1) {
+      var prev = new Date(readingDays[i - 1]);
+      var curr = new Date(readingDays[i]);
+      var diff = Math.round((curr - prev) / 86400000);
+      if (diff === 1) {
+        streak += 1;
+      } else {
+        longestStreak = Math.max(longestStreak, streak);
+        streak = 1;
+      }
+      totalGapDays += Math.max(0, diff - 1);
+      gapCount += 1;
+    }
+    longestStreak = Math.max(longestStreak, streak);
+
+    var today = new Date();
+    var todayKey = formatLocalDate(today);
+    if (readingDays.indexOf(todayKey) !== -1) {
+      var streakDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      while (true) {
+        var key = formatLocalDate(streakDate);
+        if (readingDays.indexOf(key) === -1) {
+          break;
+        }
+        currentStreak += 1;
+        streakDate.setDate(streakDate.getDate() - 1);
+      }
+    }
+  }
+
+  var averageGapDays = gapCount > 0 ? (totalGapDays / gapCount) : null;
+  var averageMinutesPerDay = readingDays.length > 0 ? (totalMinutes / readingDays.length) : 0;
+  var averageSessionsPerDay = readingDays.length > 0 ? (sessionCount / readingDays.length) : 0;
+
   return {
     totalMinutes: totalMinutes,
     sessionCount: sessionCount,
@@ -191,7 +301,14 @@ function computeGeneralStats(books, sessions, minMinutes) {
     longestMinutes: longestMinutes,
     longestBookTitle: longestBookTitle || 'n/a',
     totalPageTurns: totalPageTurns,
-    preferredPeriod: preferredPeriod
+    preferredPeriod: preferredPeriod,
+    libraryCompletion: libraryCompletion,
+    libraryCompletionText: libraryCompletionText,
+    longestStreak: longestStreak,
+    currentStreak: currentStreak,
+    averageGapDays: averageGapDays,
+    averageMinutesPerDay: averageMinutesPerDay,
+    averageSessionsPerDay: averageSessionsPerDay
   };
 }
 
@@ -206,7 +323,13 @@ function renderGeneralStats(containerId, stats) {
     '<div class="general-stat"><span>Total sessions</span><strong>' + stats.sessionCount + '</strong></div>' +
     '<div class="general-stat"><span>Average session time</span><strong>' + formatDurationLabel(stats.averageMinutes) + '</strong></div>' +
     '<div class="general-stat"><span>Longest session</span><strong>' + formatDurationLabel(stats.longestMinutes) + '</strong><em class="general-stat-sub">' + stats.longestBookTitle + '</em></div>' +
+    '<div class="general-stat"><span>Library completed</span><strong>' + stats.libraryCompletion + '%</strong><em class="general-stat-sub">' + stats.libraryCompletionText + '</em></div>' +
     '<div class="general-stat"><span>Total page turns</span><strong>' + stats.totalPageTurns + '</strong></div>' +
+    '<div class="general-stat"><span>Longest streak</span><strong>' + stats.longestStreak + ' days</strong></div>' +
+    '<div class="general-stat"><span>Current streak</span><strong>' + stats.currentStreak + ' days</strong></div>' +
+    '<div class="general-stat"><span>Average gap</span><strong>' + formatDayCount(stats.averageGapDays) + '</strong></div>' +
+    '<div class="general-stat"><span>Average time per day</span><strong>' + formatDurationLabel(stats.averageMinutesPerDay) + '</strong></div>' +
+    '<div class="general-stat"><span>Average sessions per day</span><strong>' + (Math.round(stats.averageSessionsPerDay * 10) / 10) + '</strong></div>' +
     '<div class="general-stat"><span>Preferred period</span><strong>' + stats.preferredPeriod + '</strong></div>';
 }
 
@@ -228,6 +351,9 @@ function collectSessions(books) {
       var start = new Date(session[0]);
       var end = new Date(session[1]);
       if (isNaN(start) || isNaN(end)) {
+        return;
+      }
+      if ((end - start) / 60000 < 5) {
         return;
       }
       sessions.push({
@@ -294,13 +420,13 @@ function renderYearBookList(containerId, sessions, year) {
       ? '<img src="./covers/' + entry.imageId + ' - N3_FULL.jpg" alt="' + entry.title + '">'
       : '<div class="cover-fallback small">No cover</div>';
     return (
-      '<div class="year-book-item">' +
+      '<a class="year-book-item" href="#book=' + encodeURIComponent(entry.bookId) + '">' +
         '<div class="year-book-cover">' + coverHtml + '</div>' +
         '<div class="year-book-info">' +
           '<div class="year-book-title">' + entry.title + '</div>' +
           '<div class="year-book-meta">' + formatDurationLabel(entry.minutes) + '</div>' +
         '</div>' +
-      '</div>'
+      '</a>'
     );
   }).join('');
 }
@@ -461,90 +587,224 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   }
 
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  var weekSlots = 6;
-  var margin = { top: 20, right: 0, bottom: 40, left: 40 };
-  var width = container.clientWidth || 720;
-  var height = 320;
-  var innerWidth = width - margin.left - margin.right;
-  var innerHeight = height - margin.top - margin.bottom;
+  var isBookView = targetId === 'book-punchcard';
+  var margin = isBookView
+    ? { top: 28, right: 6, bottom: 16, left: 6 }
+    : { top: 30, right: 8, bottom: 20, left: 6 };
+    var containerWidth = Math.max(1, Math.floor(container.getBoundingClientRect().width || container.clientWidth || 720));
+    var innerWidth = containerWidth - margin.left - margin.right;
 
   var totalsByDate = dayTotals.reduce(function (map, entry) {
     map[entry.dateKey] = entry;
     return map;
   }, {});
 
+  var yearStart = new Date(year, 0, 1);
+  var yearEnd = new Date(year, 11, 31);
+  var calendarStart = new Date(yearStart);
+  var calendarEnd = new Date(yearEnd);
+  if (!isBookView) {
+    calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
+    calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()));
+  }
+
+  var allDays = [];
+  var current = new Date(calendarStart);
+  while (current <= calendarEnd) {
+    allDays.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  var weeksCount = Math.ceil(allDays.length / 7);
+  var cellGap = 2;
+  var monthGapMultiplier = 1;
+  var rowCount = isBookView ? 2 : 1;
+  var rowStartMonths = isBookView ? [0, 6] : [0];
+  var rowGap = 28;
+
+  var rowBaseWeek = new Array(rowCount).fill(null);
+  var rowMonthGapCount = new Array(rowCount).fill(0);
+  var rowMaxWeek = new Array(rowCount).fill(0);
+
+  allDays.forEach(function (date, index) {
+    if (date.getFullYear() !== year) {
+      return;
+    }
+    var weekIndex = Math.floor(index / 7);
+    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    if (rowBaseWeek[row] === null || weekIndex < rowBaseWeek[row]) {
+      rowBaseWeek[row] = weekIndex;
+    }
+  });
+
+  allDays.forEach(function (date, index) {
+    if (date.getFullYear() !== year) {
+      return;
+    }
+    var weekIndex = Math.floor(index / 7);
+    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var baseWeek = rowBaseWeek[row] || 0;
+    var weekIndexRow = weekIndex - baseWeek;
+    rowMaxWeek[row] = Math.max(rowMaxWeek[row], weekIndexRow);
+
+    if (date.getDate() === 1 && date.getMonth() > rowStartMonths[row]) {
+      rowMonthGapCount[row] += 1;
+    }
+  });
+
+  var maxWeeks = Math.max.apply(null, rowMaxWeek) + 1;
+  var maxMonthGaps = Math.max.apply(null, rowMonthGapCount);
+  var denominator = maxWeeks + (maxMonthGaps * monthGapMultiplier);
+  var cellSize = Math.max(12, Math.floor((innerWidth - (maxWeeks - 1) * cellGap) / denominator));
+  var monthGap = (cellSize + cellGap) * monthGapMultiplier;
+  var unit = cellSize + cellGap;
+  var height = margin.top + margin.bottom + (unit * 7 - cellGap) * rowCount + (rowCount > 1 ? rowGap : 0);
+
+  var maxMinutes = d3.max(dayTotals, function (d) { return d.totalMinutes; }) || 1;
+  var score = function (minutes) {
+    return Math.log1p(minutes);
+  };
+  var maxScore = score(maxMinutes);
+  var baseColor = color || '#2563eb';
+  var colorScale = d3.scaleQuantize()
+    .domain([0, maxScore])
+    .range([
+      '#ebedf0',
+      d3.interpolateRgb('#ebedf0', baseColor)(0.35),
+      d3.interpolateRgb('#ebedf0', baseColor)(0.55),
+      d3.interpolateRgb('#ebedf0', baseColor)(0.75),
+      baseColor
+    ]);
+
+  var gapOffsets = new Array(allDays.length).fill(0);
+  var accumulatedGap = new Array(rowCount).fill(0);
+  allDays.forEach(function (date, index) {
+    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    if (date.getFullYear() === year && date.getDate() === 1 && date.getMonth() > rowStartMonths[row]) {
+      accumulatedGap[row] += monthGap;
+    }
+    gapOffsets[index] = accumulatedGap[row];
+  });
+
+  var cellX = function (index) {
+    var weekIndex = Math.floor(index / 7);
+    var date = allDays[index];
+    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var baseWeek = rowBaseWeek[row] || 0;
+    var weekIndexRow = weekIndex - baseWeek;
+    return weekIndexRow * unit + gapOffsets[index];
+  };
+
+  var cellY = function (index) {
+    if (!isBookView) {
+      return allDays[index].getDay() * unit;
+    }
+    var date = allDays[index];
+    var row = date.getMonth() < 6 ? 0 : 1;
+    var rowOffset = row * ((unit * 7 - cellGap) + rowGap);
+    return date.getDay() * unit + rowOffset;
+  };
+
+  var gridWidth = 0;
+  for (var i = 0; i < allDays.length; i += 1) {
+    gridWidth = Math.max(gridWidth, cellX(i) + cellSize);
+  }
+  var viewWidth = Math.max(1, gridWidth + margin.left + margin.right);
+
   var svg = d3.select(container)
     .append('svg')
-    .attr('width', width)
-    .attr('height', height);
+    .attr('width', '100%')
+    .attr('height', height)
+    .attr('viewBox', '0 0 ' + viewWidth + ' ' + height)
+    .attr('preserveAspectRatio', 'xMinYMin meet');
 
   var chart = svg.append('g')
     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-  var xScale = d3.scaleBand()
-    .domain(months)
-    .range([0, innerWidth])
-    .padding(0.1);
-
-  var yScale = d3.scaleBand()
-    .domain(days)
-    .range([0, innerHeight])
-    .padding(0.15);
-
-  var maxMinutes = d3.max(dayTotals, function (d) { return d.totalMinutes; }) || 1;
-  var rScale = d3.scaleSqrt()
-    .domain([0, maxMinutes])
-    .range([2, Math.min(xScale.bandwidth() / weekSlots, yScale.bandwidth()) * 0.45]);
-
-  var xAxis = d3.axisBottom(xScale);
-  var yAxis = d3.axisLeft(yScale).tickFormat(function (value) {
-    var index = days.indexOf(value);
-    return dayLabels[index] || value;
+  var monthRanges = {};
+  allDays.forEach(function (date, index) {
+    if (date.getFullYear() !== year) {
+      return;
+    }
+    var month = date.getMonth();
+    if (!monthRanges[month]) {
+      monthRanges[month] = { startIndex: index, endIndex: index };
+    } else {
+      monthRanges[month].endIndex = index;
+    }
   });
 
-  chart.append('g')
-    .attr('class', 'axis axis-x')
-    .attr('transform', 'translate(0,' + innerHeight + ')')
-    .call(xAxis);
+  var centeredMonthLabels = [];
+  var lastLabelX = new Array(rowCount).fill(-Infinity);
+  var minLabelGap = 24;
+  for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+    var range = monthRanges[monthIndex];
+    if (!range) {
+      continue;
+    }
+    var startX = cellX(range.startIndex);
+    var endX = cellX(range.endIndex) + cellSize;
+    var labelX = (startX + endX) / 2;
+    var labelRow = isBookView && monthIndex >= 6 ? 1 : 0;
+    if (monthIndex === 0 || labelX - lastLabelX[labelRow] >= minLabelGap) {
+      var rowOffset = labelRow * ((unit * 7 - cellGap) + rowGap);
+      centeredMonthLabels.push({ month: monthIndex, x: labelX, y: rowOffset - 6 });
+      lastLabelX[labelRow] = labelX;
+    }
+  }
 
-  chart.append('g')
-    .attr('class', 'axis axis-y')
-    .call(yAxis);
-
-  var slotWidth = xScale.bandwidth() / weekSlots;
-
-  chart.selectAll('circle.day-dot')
-    .data(dayTotals)
+  chart.selectAll('text.month-label')
+    .data(centeredMonthLabels)
     .enter()
-    .append('circle')
-    .attr('class', function (d) {
-      return 'day-dot' + (d.dateKey === selectedDateKey ? ' active' : '');
-    })
-    .attr('cx', function (d) {
-      return xScale(months[d.month]) + slotWidth * (d.weekIndex + 0.5);
-    })
-    .attr('cy', function (d) {
-      return yScale(days[d.dayOfWeek]) + yScale.bandwidth() / 2;
-    })
-    .attr('r', function (d) {
-      return rScale(d.totalMinutes);
-    })
-    .attr('fill', color || '#2563eb')
-    .attr('data-date', function (d) { return d.dateKey; })
-    .on('mouseover', function (d) {
-      var entry = totalsByDate[d.dateKey];
-      if (!entry) {
-        return;
-      }
+    .append('text')
+    .attr('class', 'month-label')
+    .attr('x', function (d) { return d.x; })
+    .attr('y', function (d) { return d.y; })
+    .attr('text-anchor', 'middle')
+    .text(function (d) { return months[d.month]; });
 
-      var durationLabel = formatDurationLabel(entry.totalMinutes);
-      var date = entry.date;
-      var dateLabel = days[date.getDay()] + ', ' + formatOrdinal(date.getDate()) + ' of ' + monthNames[date.getMonth()];
+
+
+  chart.selectAll('rect.day-cell')
+    .data(allDays)
+    .enter()
+    .append('rect')
+    .attr('class', function (d) {
+      var dateKey = formatLocalDate(d);
+      var inYear = d.getFullYear() === year;
+      var classes = 'day-cell' + (dateKey === selectedDateKey ? ' active' : '');
+      if (!inYear) {
+        classes += ' outside-year';
+      }
+      return classes;
+    })
+    .attr('width', cellSize)
+    .attr('height', cellSize)
+    .attr('x', function (d, i) {
+      return cellX(i);
+    })
+    .attr('y', function (d, i) {
+      return cellY(i);
+    })
+    .attr('rx', 2)
+    .attr('fill', function (d) {
+      if (d.getFullYear() !== year) {
+        return 'transparent';
+      }
+      var dateKey = formatLocalDate(d);
+      var entry = totalsByDate[dateKey];
+      return entry ? colorScale(score(entry.totalMinutes)) : '#ebedf0';
+    })
+    .on('mouseover', function (d) {
+      var dateKey = formatLocalDate(d);
+      var entry = totalsByDate[dateKey];
+      var durationLabel = formatDurationLabel(entry ? entry.totalMinutes : 0);
+      var dateLabel = days[d.getDay()] + ', ' + formatOrdinal(d.getDate()) + ' of ' + monthNames[d.getMonth()];
       var headline = durationLabel + ' of reading on ' + dateLabel;
-      var sessionsForDay = (sessionsByDate && sessionsByDate[d.dateKey]) || [];
+      var sessionsForDay = (sessionsByDate && sessionsByDate[dateKey]) || [];
       var bookTitles = Array.from(new Set(sessionsForDay.map(function (session) {
         return session.bookTitle;
       }))).sort();
@@ -573,10 +833,12 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       tooltip.style('opacity', 0);
     })
     .on('click', function (d) {
+      var dateKey = formatLocalDate(d);
       if (onDayClick) {
-        onDayClick(d.dateKey);
+        onDayClick(dateKey);
       }
     });
+
 }
 
 function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
@@ -645,12 +907,17 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
     .call(xAxis);
 
   if (!config.hideYAxis) {
-    chart.append('g')
+    var yAxisGroup = chart.append('g')
       .attr('class', 'axis axis-y')
       .call(yAxis);
+
+    var wrapWidth = Math.max(40, margin.left - 24);
+    yAxisGroup.selectAll('text')
+      .call(wrapSvgText, wrapWidth);
   }
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(books);
+  var tooltip = getDayTooltip();
 
   chart.selectAll('rect.session')
     .data(sessions)
@@ -671,7 +938,28 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
     .attr('height', yScale.bandwidth() * 0.6)
     .attr('rx', 4)
     .attr('fill', function (d) { return colorScale(d.bookTitle); })
-    .attr('opacity', 0.8);
+    .attr('opacity', 0.8)
+    .on('mouseover', function (d) {
+      var minutes = Math.max(0, (d.end - d.start) / 60000);
+      var durationLabel = formatDurationLabel(minutes);
+      tooltip.html(
+        '<div class="tooltip-title">' + d.bookTitle + '</div>' +
+        '<div class="tooltip-meta">' + durationLabel + ' session</div>'
+      );
+
+      tooltip
+        .style('opacity', 1)
+        .style('left', (d3.event.pageX + 12) + 'px')
+        .style('top', (d3.event.pageY - 18) + 'px');
+    })
+    .on('mousemove', function () {
+      tooltip
+        .style('left', (d3.event.pageX + 12) + 'px')
+        .style('top', (d3.event.pageY - 18) + 'px');
+    })
+    .on('mouseout', function () {
+      tooltip.style('opacity', 0);
+    });
 }
 
 function closeTimelineModal() {
@@ -776,12 +1064,16 @@ function sortBooks(books, mode) {
 
 function renderBookDetail(book) {
   var detail = document.getElementById('book-detail');
+  var statusHeader = document.getElementById('book-status-header');
   if (!detail) {
     return;
   }
 
   if (!book) {
     detail.innerHTML = '<div class="empty">Select a book to see its stats.</div>';
+    if (statusHeader) {
+      statusHeader.innerHTML = '';
+    }
     renderPunchcard('book-punchcard', []);
     return;
   }
@@ -813,9 +1105,44 @@ function renderBookDetail(book) {
     var seriesNumber = book.series_number ? (' #' + book.series_number) : '';
     seriesLine = '<div class="book-series">' + book.series + seriesNumber + '</div>';
   }
+  var statusText = (book.read_status || 'Unknown');
+  var statusClass = 'status-unknown';
+  if (statusText === 'Unread') {
+    statusClass = 'status-unread';
+  } else if (statusText === 'Reading') {
+    statusClass = 'status-reading';
+  } else if (statusText === 'Finished') {
+    statusClass = 'status-finished';
+  }
+  var totalTimeLabel = formatHoursAndMinutes(book._reading_time);
+  var sessionCount = book._session_count || 0;
+  var sessionLabel = sessionCount === 1 ? '1 session' : sessionCount + ' sessions';
+  var chaptersCount = book.chapters != null ? book.chapters : null;
+  var chaptersLabel = chaptersCount != null
+    ? (chaptersCount + ' ' + (chaptersCount === 1 ? 'chapter' : 'chapters'))
+    : '';
+  var totalTimeLine = totalTimeLabel
+    ? '<div class="book-time">' + totalTimeLabel + ' in ' + sessionLabel + '</div>'
+    : '';
+  var chaptersLine = chaptersLabel
+    ? '<div class="book-chapters">' + chaptersLabel + '</div>'
+    : '';
+  var pageTurnsLabel = (book.page_turns != null)
+    ? (book.page_turns + ' page turns')
+    : '';
+  var pageTurnsLine = pageTurnsLabel
+    ? '<div class="book-turns">' + pageTurnsLabel + '</div>'
+    : '';
+  var statusBadge = '<span class="status-badge ' + statusClass + '">' + statusText + '</span>';
+  var headerMeta = '<div class="book-header-meta">' + chaptersLine + totalTimeLine + pageTurnsLine + '</div>';
   headerText.innerHTML = '<h2>' + (book.title || 'Untitled') + '</h2>' +
     '<div class="book-subtitle">' + (book.author || 'Unknown author') + '</div>' +
-    seriesLine;
+    seriesLine +
+    headerMeta;
+
+  if (statusHeader) {
+    statusHeader.innerHTML = statusBadge;
+  }
 
   header.appendChild(cover);
   header.appendChild(headerText);
@@ -836,23 +1163,7 @@ function renderBookDetail(book) {
 
   var metrics = document.createElement('div');
   metrics.className = 'book-metrics';
-  var statusText = (book.read_status || 'Unknown');
-  var statusClass = 'status-unknown';
-  if (statusText === 'Unread') {
-    statusClass = 'status-unread';
-  } else if (statusText === 'Reading') {
-    statusClass = 'status-reading';
-  } else if (statusText === 'Finished') {
-    statusClass = 'status-finished';
-  }
-  var totalTimeLabel = formatHoursAndMinutes(book._reading_time);
-  var totalTimeRow = totalTimeLabel
-    ? '<div><strong>Total read time:</strong> ' + totalTimeLabel + '</div>'
-    : '';
-  metrics.innerHTML =
-    totalTimeRow +
-    '<div><strong>Read status:</strong> <span class="status-badge ' + statusClass + '">' + statusText + '</span></div>' +
-    '<div><strong>Page turns:</strong> ' + (book.page_turns != null ? book.page_turns : 'n/a') + '</div>';
+  metrics.innerHTML = '';
 
   stats.appendChild(metrics);
 
@@ -865,6 +1176,10 @@ function renderBookDetail(book) {
 function getSelectedId() {
   var match = window.location.hash.match(/book=([^&]+)/);
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+function isAllHash() {
+  return window.location.hash === '#all';
 }
 
 function loadData() {
@@ -897,10 +1212,10 @@ $(function () {
       return (b._reading_time || 0) - (a._reading_time || 0);
     });
 
-    var selectedId = getSelectedId() || (library.books[0] && library.books[0].id);
-    var selectedBook = library.books.find(function (book) {
-      return book.id === selectedId;
-    });
+    var selectedId = getSelectedId();
+    var selectedBook = selectedId
+      ? library.books.find(function (book) { return book.id === selectedId; })
+      : (library.books[0] && library.books[0].id ? library.books[0] : null);
 
     var bookSearchInput = document.getElementById('book-search');
     var bookSortSelect = document.getElementById('book-sort');
@@ -1033,6 +1348,15 @@ $(function () {
 
     var setView = function (view) {
       var isByBook = view === 'book';
+      if (!isByBook) {
+        selectedBook = null;
+        updateBookList();
+        if (!isAllHash()) {
+          window.location.hash = 'all';
+        }
+      } else if (isAllHash()) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
       if (byBookSection) {
         byBookSection.hidden = !isByBook;
       }
@@ -1060,6 +1384,26 @@ $(function () {
       }
     };
 
+    var handleHashChange = function () {
+      if (!window.location.hash) {
+        setView('book');
+        return;
+      }
+      if (isAllHash()) {
+        setView('all');
+        return;
+      }
+      var hashId = getSelectedId();
+      if (hashId) {
+        var found = library.books.find(function (book) { return book.id === hashId; });
+        if (found) {
+          selectedBook = found;
+          updateBookList();
+          setView('book');
+        }
+      }
+    };
+
     if (byBookButton) {
       byBookButton.addEventListener('click', function () {
         setView('book');
@@ -1072,18 +1416,8 @@ $(function () {
       });
     }
 
-    setView('book');
-
-    $(window).on('hashchange', function () {
-      var newSelectedId = getSelectedId();
-      var newSelectedBook = library.books.find(function (book) {
-        return book.id === newSelectedId;
-      });
-
-      selectedBook = newSelectedBook;
-      selectedBookYear = null;
-      updateBookList();
-    });
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
 
     var timelineModal = document.getElementById('timeline-modal');
     if (timelineModal) {

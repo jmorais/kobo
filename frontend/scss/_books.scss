@@ -5,6 +5,14 @@
   max-height: 620px;
   overflow: auto;
   padding-right: 4px;
+
+  .book-status {
+  }
+
+  .book-time {
+    font-size: 12px;
+    color: #6b7280;
+  }  
 }
 
 .book-controls {
@@ -108,6 +116,42 @@
 
 .book-header-text {
   flex: 1;
+
+  .book-header-meta {
+    margin-top: 8px;
+  }
+
+  .book-status {
+    margin-top: 0;
+  }
+  
+  .book-time {
+    margin-top: 0;
+    font-size: 12px;
+  }
+
+  .book-chapters {
+    margin-top: 0;
+    font-size: 12px;
+    // color: #6b7280;
+  }
+
+  .book-turns {
+    font-size: 12px;
+    // color: #6b7280;
+  }
+}
+
+.book-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.book-status-header {
+  display: inline-flex;
+  align-items: center;
 }
 
 .book-cover {
@@ -148,8 +192,8 @@
 .book-series {
   color: #6b7280;
   font-size: 12px;
-  margin-top: -10px;
-  margin-bottom: 16px;
+  margin-top: -16px;
+  // margin-bottom: 16px;
 }
 
 .book-stats {
@@ -218,9 +262,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;

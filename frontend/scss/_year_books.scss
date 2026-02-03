@@ -1,6 +1,6 @@
 .year-books {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -12,6 +12,16 @@
   border: 1px solid #eef1f6;
   border-radius: 12px;
   background: #fff;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus {
+    border-color: #cbd5f5;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    text-decoration: none;
+  }
 }
 
 .year-book-cover {

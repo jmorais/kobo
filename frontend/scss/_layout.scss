@@ -5,9 +5,12 @@
   overflow: hidden;
 
   > .panel-heading {
-    padding: 15px;
+    padding: 16px;
     background: #fff;
     border-bottom: 1px solid #eef1f6;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
   }
 
   .panel-title {

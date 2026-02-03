@@ -1,6 +1,6 @@
 class Book
 
-  attr_accessor :title, :author, :id, :events, :reading_time, :page_turns, :percent_read, :read_status, :series, :series_number, :isbn13, :image_id
+  attr_accessor :title, :author, :id, :events, :reading_time, :page_turns, :percent_read, :read_status, :series, :series_number, :isbn13, :image_id, :chapters
 
   READ_STATUS = %w[Unread Reading Finished]
 
@@ -60,6 +60,7 @@ class Book
       author: @author,
       isbn13: @isbn13,
       image_id: @image_id,
+      chapters: @chapters,
       percent_read: @percent_read,
       read_status: read_status,
       page_turns: page_turns,
