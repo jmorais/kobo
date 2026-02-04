@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  stats_reader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kobo-stats-reader
+    ports:
+      - "8080:80"
+    volumes:
+      # Persist uploads and generated data
+      - ./frontend/uploads:/var/www/html/frontend/uploads
+      - ./frontend/covers:/var/www/html/frontend/covers
+      - ./frontend/data.json:/var/www/html/frontend/data.json
+      - ./isbn_cache.json:/var/www/html/isbn_cache.json
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
