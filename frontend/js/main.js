@@ -609,7 +609,7 @@ function renderYearBookList(containerId, sessions, year) {
 
   container.innerHTML = totals.map(function (entry) {
     var coverHtml = entry.imageId
-      ? '<img src="./covers/' + entry.imageId + ' - N3_FULL.jpg" alt="' + entry.title + '">'
+      ? '<img src="./covers/' + entry.imageId + ' - N3_LIBRARY_GRID.jpg" alt="' + entry.title + '">'
       : '<div class="cover-fallback small">No cover</div>';
     return (
       '<a class="year-book-item" href="#book=' + encodeURIComponent(entry.bookId) + '">' +
@@ -1187,7 +1187,7 @@ function renderBookList(books, selectedId) {
     if (book.image_id) {
       var img = document.createElement('img');
       img.alt = (book.title || 'Book cover');
-      img.src = './covers/' + book.image_id + ' - N3_FULL.jpg';
+      img.src = './covers/' + book.image_id + ' - N3_LIBRARY_GRID.jpg';
       img.onerror = function () {
         cover.innerHTML = '<div class="cover-fallback small">No cover</div>';
       };
@@ -1287,7 +1287,7 @@ function renderBookDetail(book) {
   if (book.image_id) {
     var img = document.createElement('img');
     img.alt = (book.title || 'Book cover');
-    img.src = './covers/' + book.image_id + ' - N3_FULL.jpg';
+    img.src = './covers/' + book.image_id + ' - N3_LIBRARY_GRID.jpg';
     img.onerror = function () {
       cover.innerHTML = '<div class="cover-fallback">No cover</div>';
     };
@@ -1382,6 +1382,10 @@ function getSelectedId() {
 
 function isAllHash() {
   return window.location.hash === '#all';
+}
+
+function isHighlightsHash() {
+  return window.location.hash === '#highlights';
 }
 
 function loadData() {
@@ -1612,7 +1616,11 @@ $(function () {
         if (!isAllHash()) {
           window.location.hash = 'all';
         }
-      } else if (isAllHash()) {
+      } else if (isHighlights) {
+        if (!isHighlightsHash()) {
+          window.location.hash = 'highlights';
+        }
+      } else if (isAllHash() || isHighlightsHash()) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
       if (byBookSection) {
@@ -1659,6 +1667,10 @@ $(function () {
       }
       if (isAllHash()) {
         setView('all');
+        return;
+      }
+      if (isHighlightsHash()) {
+        setView('highlights');
         return;
       }
       var hashId = getSelectedId();
