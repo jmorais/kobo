@@ -49,6 +49,9 @@ class Library
       begin
         content_id = book[0].to_s
         content_type = book[7]
+        if content_id.downcase.include?('userguide.pdf')
+          next
+        end
         if content_type.to_s == '6' && !content_id.start_with?('file://')
           next
         end
