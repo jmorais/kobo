@@ -82,6 +82,20 @@ function calculateReadingTime(book) {
   return Math.round((seconds / 3600) * 10) / 10;
 }
 
+function getLastReadTimestamp(book) {
+  var sessions = safeSessions(book);
+  var latest = null;
+  sessions.forEach(function (session) {
+    var end = Date.parse(session[1]);
+    if (!isNaN(end)) {
+      if (latest === null || end > latest) {
+        latest = end;
+      }
+    }
+  });
+  return latest;
+}
+
 function countReadingSessions(book, minMinutes) {
   var sessions = safeSessions(book);
   var minSeconds = (minMinutes || 10) * 60;
@@ -131,6 +145,10 @@ function formatLocalDate(date) {
 function formatHighlightDate(value) {
   if (!value) {
     return 'Unknown date';
+  }
+  if (typeof moment === 'function') {
+    var formatted = moment(value).local().format('DD/MM/YYYY [às] HH:mm');
+    return formatted === 'Invalid date' ? 'Unknown date' : formatted;
   }
   var date = new Date(value);
   if (isNaN(date)) {
@@ -474,9 +492,14 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
     container.innerHTML = items.map(function (item) {
       var textClass = isWord ? 'highlight-word' : 'highlight-text';
       var dateLabel = formatHighlightDate(item.date);
+      var wordLink = item.text;
+      if (isWord) {
+        var lookup = encodeURIComponent(item.text.toLowerCase());
+        wordLink = '<a class="highlight-link" href="https://dictionary.cambridge.org/dictionary/english/' + lookup + '" target="_blank" rel="noopener">' + item.text + '</a>';
+      }
       return (
         '<div class="highlight-item">' +
-          '<div class="' + textClass + '">' + item.text + '</div>' +
+          '<div class="' + textClass + '">' + wordLink + '</div>' +
           '<div class="highlight-meta">' + item.bookTitle + ' • ' + dateLabel + '</div>' +
         '</div>'
       );
@@ -1187,6 +1210,12 @@ function filterBooks(books, query) {
 
 function sortBooks(books, mode) {
   var sorted = books.slice();
+  if (mode === 'last') {
+    sorted.sort(function (a, b) {
+      return (b._last_read || 0) - (a._last_read || 0);
+    });
+    return sorted;
+  }
   if (mode === 'title') {
     sorted.sort(function (a, b) {
       return (a.title || '').localeCompare(b.title || '');
@@ -1352,6 +1381,7 @@ $(function () {
     library.books = library.books.map(function (book) {
       book._reading_time = calculateReadingTime(book);
       book._session_count = countReadingSessions(book, 10);
+      book._last_read = getLastReadTimestamp(book);
       return book;
     });
 
@@ -1367,7 +1397,7 @@ $(function () {
     var bookSearchInput = document.getElementById('book-search');
     var bookSortSelect = document.getElementById('book-sort');
     var currentQuery = '';
-    var currentSort = 'time';
+    var currentSort = 'last';
     var filteredBooks = library.books.slice();
 
     var updateBookList = function () {
@@ -1397,7 +1427,7 @@ $(function () {
 
     if (bookSortSelect) {
       bookSortSelect.addEventListener('change', function (event) {
-        currentSort = event.target.value || 'time';
+        currentSort = event.target.value || 'last';
         updateBookList();
       });
     }
