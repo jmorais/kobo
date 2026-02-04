@@ -47,7 +47,17 @@ function renderLastUpdated(containerId, timestamp) {
   var diffDays = Math.max(0, Math.floor((now - updatedAt) / 86400000));
 
   if (diffDays === 0) {
-    container.textContent = 'last updated today';
+    var diffMinutes = Math.max(0, Math.floor((now - updatedAt) / 60000));
+    var hours = Math.floor(diffMinutes / 60);
+    var minutes = diffMinutes % 60;
+    var hourLabel = hours === 1 ? '1 hour' : hours + ' hours';
+    var minuteLabel = minutes === 1 ? '1 minute' : minutes + ' minutes';
+    var parts = [];
+    if (hours > 0) {
+      parts.push(hourLabel);
+    }
+    parts.push(minuteLabel);
+    container.textContent = 'last updated ' + parts.join(' ') + ' ago';
   } else if (diffDays === 1) {
     container.textContent = 'last updated 1 day ago';
   } else {
