@@ -5,8 +5,12 @@ LOG_PATH="/mnt/onboard/.adds/scripts/auto-sync/out.log"
 DB_PATH="/mnt/onboard/.kobo/KoboReader.sqlite"
 REMOTE_URL="http://kobo.anya.home/upload.php"
 CURL_BIN="/mnt/onboard/.adds/scripts/auto-sync/curl"
+SQLITE_BIN="/mnt/onboard/.adds/scripts/auto-sync/sqlite3"
 TMP_PATH="/tmp/KoboReader.sqlite"
 GZ_PATH="/tmp/KoboReader.sqlite.gz"
+
+LD_LIBRARY_PATH="/mnt/onboard/.adds/scripts/auto-sync/lib:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
 
 cleanup() {
   rm -f "$TMP_PATH" "$GZ_PATH"
@@ -28,8 +32,13 @@ trap cleanup EXIT
     exit 1
   fi
 
-  echo "Copying DB to $TMP_PATH"
-  cp "$DB_PATH" "$TMP_PATH"
+  echo "Snapshotting DB to $TMP_PATH (sqlite3 .backup)"
+  if [ ! -x "$SQLITE_BIN" ]; then
+    echo "sqlite3 not found or not executable: $SQLITE_BIN"
+    qndb -m mwcToast 2000 "sqlite3 not found!"
+    exit 1
+  fi
+  "$SQLITE_BIN" "$DB_PATH" ".backup '$TMP_PATH'"
   ls -l "$TMP_PATH"
 
   echo "Compressing DB to $GZ_PATH"
