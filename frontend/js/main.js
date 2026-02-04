@@ -156,11 +156,15 @@ function formatHighlightDate(value) {
   if (!value) {
     return 'Unknown date';
   }
+  var normalizedValue = value;
+  if (typeof value === 'string' && !/(Z|[+-]\d{2}:?\d{2}|GMT|UTC)/i.test(value)) {
+    normalizedValue = value + 'Z';
+  }
   if (typeof moment === 'function') {
-    var formatted = moment(value).local().format('DD/MM/YYYY [às] HH:mm');
+    var formatted = moment.utc(normalizedValue).local().format('DD/MM/YYYY [às] HH:mm');
     return formatted === 'Invalid date' ? 'Unknown date' : formatted;
   }
-  var date = new Date(value);
+  var date = new Date(normalizedValue);
   if (isNaN(date)) {
     return 'Unknown date';
   }
@@ -170,6 +174,18 @@ function formatHighlightDate(value) {
   var hours = date.getHours().toString().padStart(2, '0');
   var minutes = date.getMinutes().toString().padStart(2, '0');
   return day + '/' + month + '/' + year + ' às ' + hours + ':' + minutes;
+}
+
+function parseHighlightDate(value) {
+  if (!value) {
+    return null;
+  }
+  var normalizedValue = value;
+  if (typeof value === 'string' && !/(Z|[+-]\d{2}:?\d{2}|GMT|UTC)/i.test(value)) {
+    normalizedValue = value + 'Z';
+  }
+  var date = new Date(normalizedValue);
+  return isNaN(date) ? null : date;
 }
 
 function formatOrdinal(value) {
@@ -464,8 +480,8 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
   });
 
   var toTimestamp = function (value) {
-    var date = new Date(value);
-    return isNaN(date) ? 0 : date.getTime();
+    var date = parseHighlightDate(value);
+    return date ? date.getTime() : 0;
   };
 
   var sortBy = function (items, mode) {
@@ -491,7 +507,7 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
     return sorted;
   };
 
-  words = sortBy(words, wordSort || 'alpha');
+  words = sortBy(words, wordSort || 'date');
   quotes = sortBy(quotes, quoteSort || 'date');
 
   var renderList = function (container, items, isWord) {
