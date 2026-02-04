@@ -1,14 +1,23 @@
 function normalizeLibrary(raw) {
   if (!raw) {
-    return { books: [] };
+    return { books: [], last_updated_at: null };
   }
 
   if (Array.isArray(raw.books)) {
-    return { books: raw.books };
+    return { books: raw.books, last_updated_at: raw.last_updated_at || null };
+  }
+
+  if (raw.books && typeof raw.books === 'object') {
+    var mapped = Object.keys(raw.books).map(function (id) {
+      var book = raw.books[id] || {};
+      book.id = book.id || id;
+      return book;
+    });
+    return { books: mapped, last_updated_at: raw.last_updated_at || null };
   }
 
   if (Array.isArray(raw)) {
-    return { books: raw };
+    return { books: raw, last_updated_at: null };
   }
 
   var books = Object.keys(raw).map(function (id) {
@@ -17,7 +26,33 @@ function normalizeLibrary(raw) {
     return book;
   });
 
-  return { books: books };
+  return { books: books, last_updated_at: null };
+}
+
+function renderLastUpdated(containerId, timestamp) {
+  var container = document.getElementById(containerId);
+  if (!container) {
+    return;
+  }
+  if (!timestamp) {
+    container.textContent = '';
+    return;
+  }
+  var updatedAt = new Date(timestamp);
+  if (isNaN(updatedAt)) {
+    container.textContent = '';
+    return;
+  }
+  var now = new Date();
+  var diffDays = Math.max(0, Math.floor((now - updatedAt) / 86400000));
+
+  if (diffDays === 0) {
+    container.textContent = 'last updated today';
+  } else if (diffDays === 1) {
+    container.textContent = 'last updated 1 day ago';
+  } else {
+    container.textContent = 'last updated ' + diffDays + ' days ago';
+  }
 }
 
 function safeSessions(book) {
@@ -1502,6 +1537,7 @@ $(function () {
 
     updateHighlights();
     closeTimelineModal();
+    renderLastUpdated('last-updated', library.last_updated_at);
 
     var byBookButton = document.getElementById('view-by-book');
     var allButton = document.getElementById('view-all');

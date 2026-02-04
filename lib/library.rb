@@ -2,6 +2,7 @@ require 'sqlite3'
 require 'json'
 require 'net/http'
 require 'uri'
+require 'time'
 
 require_relative 'book'
 require_relative 'event'
@@ -89,7 +90,7 @@ class Library
   end
 
   def to_json
-    @books.map{ |x| [x.id, x.to_json] }.to_h.to_json
+    export_payload.to_json
   end
 
   def to_s
@@ -110,13 +111,17 @@ class Library
 
   def save(filepath)
     old_data = load_existing_data(filepath)
-    new_data = @books.map{ |x| [x.id, x.to_json] }.to_h
+    new_data = @books.map { |book| book.to_json.merge(id: book.id) }
 
-    new_data.each do |k, v|
-      new_data[k][:reading_sessions] = (new_data[k][:reading_sessions] + old_data[k]['reading_sessions']).uniq if old_data&.[](k)&.[]('reading_sessions')&.any?
+    new_data.each do |book|
+      old_entry = old_data.is_a?(Hash) ? old_data[book[:id].to_s] : nil
+      if old_entry && old_entry['reading_sessions']&.any?
+        book[:reading_sessions] = (book[:reading_sessions] + old_entry['reading_sessions']).uniq
+      end
     end
 
-    File.write(filepath, format_output(filepath, new_data))
+    payload = export_payload(new_data)
+    File.write(filepath, format_output(filepath, payload))
   end
 
   private
@@ -324,5 +329,12 @@ class Library
     return data.to_json if filepath.end_with?(".json")
 
     "library=#{data.to_json}"
+  end
+
+  def export_payload(books = nil)
+    {
+      last_updated_at: Time.now.utc.iso8601,
+      books: books || @books.map { |book| book.to_json.merge(id: book.id) }
+    }
   end
 end
