@@ -4,8 +4,42 @@
   margin-bottom: 10px;
 }
 
+.timeline-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.timeline-stat {
+  background: #fff;
+  border: 1px solid #eef1f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 12px;
+
+  strong {
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+  }
+}
+
+
 .timeline-chart {
   min-height: 260px;
+}
+
+.timeline-books {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .timeline-modal {

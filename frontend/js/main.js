@@ -152,6 +152,17 @@ function formatLocalDate(date) {
   return year + '-' + month + '-' + day;
 }
 
+function formatDateKey(value) {
+  if (!value) {
+    return '';
+  }
+  var parts = value.split('-');
+  if (parts.length !== 3) {
+    return value;
+  }
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+
 function formatHighlightDate(value) {
   if (!value) {
     return 'Unknown date';
@@ -608,18 +619,21 @@ function renderYearBookList(containerId, sessions, year) {
   }
 
   container.innerHTML = totals.map(function (entry) {
+    var titleText = entry.title || 'Untitled';
+    var timeLabel = formatDurationLabel(entry.minutes || 0);
     var coverHtml = entry.imageId
-      ? '<img src="./covers/' + entry.imageId + ' - N3_LIBRARY_GRID.jpg" alt="' + entry.title + '">'
+      ? '<img src="./covers/' + entry.imageId + ' - N3_LIBRARY_GRID.jpg" alt="' + titleText + '">' 
       : '<div class="cover-fallback small">No cover</div>';
-    return (
-      '<a class="year-book-item" href="#book=' + encodeURIComponent(entry.bookId) + '">' +
-        '<div class="year-book-cover">' + coverHtml + '</div>' +
-        '<div class="year-book-info">' +
-          '<div class="year-book-title">' + entry.title + '</div>' +
-          '<div class="year-book-meta">' + formatDurationLabel(entry.minutes) + '</div>' +
-        '</div>' +
-      '</a>'
-    );
+    var infoHtml =
+      '<div class="year-book-cover">' + coverHtml + '</div>' +
+      '<div class="year-book-info">' +
+        '<div class="year-book-title">' + titleText + '</div>' +
+        '<div class="year-book-meta">' + timeLabel + '</div>' +
+      '</div>';
+    if (entry.bookId) {
+      return '<a class="year-book-item" href="#book=' + encodeURIComponent(entry.bookId) + '">' + infoHtml + '</a>';
+    }
+    return '<div class="year-book-item">' + infoHtml + '</div>';
   }).join('');
 }
 
@@ -783,6 +797,19 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   var isBookView = targetId === 'book-punchcard';
+  var resolveBookRow = function (date) {
+    if (!isBookView) {
+      return 0;
+    }
+    var dateYear = date.getFullYear();
+    if (dateYear < year) {
+      return 0;
+    }
+    if (dateYear > year) {
+      return 1;
+    }
+    return date.getMonth() < 6 ? 0 : 1;
+  };
   var margin = isBookView
     ? { top: 28, right: 6, bottom: 16, left: 6 }
     : { top: 30, right: 8, bottom: 20, left: 6 };
@@ -798,10 +825,8 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var yearEnd = new Date(year, 11, 31);
   var calendarStart = new Date(yearStart);
   var calendarEnd = new Date(yearEnd);
-  if (!isBookView) {
-    calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
-    calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()));
-  }
+  calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
+  calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()));
 
   var allDays = [];
   var current = new Date(calendarStart);
@@ -826,7 +851,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       return;
     }
     var weekIndex = Math.floor(index / 7);
-    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var row = resolveBookRow(date);
     if (rowBaseWeek[row] === null || weekIndex < rowBaseWeek[row]) {
       rowBaseWeek[row] = weekIndex;
     }
@@ -837,7 +862,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       return;
     }
     var weekIndex = Math.floor(index / 7);
-    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var row = resolveBookRow(date);
     var baseWeek = rowBaseWeek[row] || 0;
     var weekIndexRow = weekIndex - baseWeek;
     rowMaxWeek[row] = Math.max(rowMaxWeek[row], weekIndexRow);
@@ -874,7 +899,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var gapOffsets = new Array(allDays.length).fill(0);
   var accumulatedGap = new Array(rowCount).fill(0);
   allDays.forEach(function (date, index) {
-    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var row = resolveBookRow(date);
     if (date.getFullYear() === year && date.getDate() === 1 && date.getMonth() > rowStartMonths[row]) {
       accumulatedGap[row] += monthGap;
     }
@@ -884,7 +909,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var cellX = function (index) {
     var weekIndex = Math.floor(index / 7);
     var date = allDays[index];
-    var row = isBookView ? (date.getMonth() < 6 ? 0 : 1) : 0;
+    var row = resolveBookRow(date);
     var baseWeek = rowBaseWeek[row] || 0;
     var weekIndexRow = weekIndex - baseWeek;
     return weekIndexRow * unit + gapOffsets[index];
@@ -895,7 +920,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       return allDays[index].getDay() * unit;
     }
     var date = allDays[index];
-    var row = date.getMonth() < 6 ? 0 : 1;
+    var row = resolveBookRow(date);
     var rowOffset = row * ((unit * 7 - cellGap) + rowGap);
     return date.getDay() * unit + rowOffset;
   };
@@ -1025,6 +1050,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       tooltip.style('opacity', 0);
     })
     .on('click', function (d) {
+      tooltip.style('opacity', 0);
       var dateKey = formatLocalDate(d);
       if (onDayClick) {
         onDayClick(dateKey);
@@ -1038,17 +1064,31 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   var label = document.getElementById(labelId);
   var modal = document.getElementById('timeline-modal');
   var title = document.getElementById('timeline-title');
+  var booksList = document.getElementById('timeline-books');
+  var booksSection = document.getElementById('timeline-books-section');
   if (!container || !label) {
     return;
   }
 
   var config = options || {};
   if (title) {
-    title.textContent = config.title || 'Reading timeline';
+    var baseTitle = config.title || 'Reading timeline';
+    var dateLabel = formatDateKey(dateKey);
+    title.textContent = dateLabel ? (baseTitle + ' on ' + dateLabel) : baseTitle;
   }
 
   container.innerHTML = '';
-  label.textContent = dateKey ? dateKey : 'Select a day to see sessions.';
+  if (!dateKey) {
+    label.textContent = 'Select a day to see sessions.';
+  } else {
+    label.textContent = '';
+  }
+  if (booksList) {
+    booksList.innerHTML = '';
+  }
+  if (booksSection) {
+    booksSection.style.display = (options && options.hideYAxis) ? 'none' : '';
+  }
   if (modal) {
     modal.setAttribute('aria-hidden', 'false');
     modal.classList.add('is-open');
@@ -1060,8 +1100,76 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   }
 
   var sessions = sessionsByDate[dateKey];
+  if (booksList && !(options && options.hideYAxis)) {
+    var booksById = {};
+    sessions.forEach(function (session) {
+      var bookId = session.bookId || '';
+      var bookTitle = session.bookTitle || 'Untitled';
+      var key = bookId || bookTitle;
+      if (!booksById[key]) {
+        var imageId = null;
+        if (bookId && config.bookLookup && config.bookLookup[bookId]) {
+          imageId = config.bookLookup[bookId].image_id || null;
+        } else if (session.bookImageId) {
+          imageId = session.bookImageId;
+        }
+        booksById[key] = {
+          bookId: bookId,
+          title: bookTitle,
+          imageId: imageId,
+          minutes: 0
+        };
+      }
+      booksById[key].minutes += Math.max(0, (session.end - session.start) / 60000);
+    });
+    var dayBooks = Object.keys(booksById)
+      .map(function (key) { return booksById[key]; })
+      .filter(function (entry) { return entry.minutes > 0; })
+      .sort(function (a, b) { return b.minutes - a.minutes; });
+    booksList.innerHTML = dayBooks.map(function (entry) {
+      var titleText = entry.title || 'Untitled';
+      var timeLabel = formatDurationLabel(entry.minutes || 0);
+      var coverHtml = entry.imageId
+        ? '<img src="./covers/' + entry.imageId + ' - N3_LIBRARY_GRID.jpg" alt="' + titleText + '">' 
+        : '<div class="cover-fallback small">No cover</div>';
+      var infoHtml =
+        '<div class="year-book-cover">' + coverHtml + '</div>' +
+        '<div class="year-book-info">' +
+          '<div class="year-book-title">' + titleText + '</div>' +
+          '<div class="year-book-meta">' + timeLabel + '</div>' +
+        '</div>';
+      if (entry.bookId) {
+        return '<a class="year-book-item timeline-book-link" href="#book=' + encodeURIComponent(entry.bookId) + '">' + infoHtml + '</a>';
+      }
+      return '<div class="year-book-item">' + infoHtml + '</div>';
+    }).join('');
+    // Add click handler to dismiss modal
+    var links = booksList.querySelectorAll('.timeline-book-link');
+    links.forEach(function (link) {
+      link.addEventListener('click', function () {
+        var modal = document.getElementById('timeline-modal');
+        if (modal) {
+          modal.setAttribute('aria-hidden', 'true');
+          modal.classList.remove('is-open');
+        }
+      });
+    });
+  }
   var books = Array.from(new Set(sessions.map(function (session) { return session.bookTitle; })));
   books.sort();
+  if (label) {
+    var totalMinutes = sessions.reduce(function (sum, session) {
+      return sum + Math.max(0, (session.end - session.start) / 60000);
+    }, 0);
+    var sessionCount = sessions.length;
+    var sessionLabel = sessionCount === 1 ? 'session' : 'sessions';
+    var totalTimeLabel = formatDurationLabel(totalMinutes);
+    label.innerHTML =
+      '<div class="timeline-stats">' +
+        '<div class="timeline-stat"><span>Total sessions</span><strong>' + sessionCount + '</strong></div>' +
+        '<div class="timeline-stat"><span>Total time read</span><strong>' + totalTimeLabel + '</strong></div>' +
+      '</div>';
+  }
 
   var margin = { top: 10, right: 20, bottom: 40, left: config.hideYAxis ? 30 : 160 };
   var width = Math.max(container.clientWidth, 720);
@@ -1420,6 +1528,7 @@ $(function () {
     });
 
     var selectedId = getSelectedId();
+    var hasExplicitSelection = !!selectedId;
     var selectedBook = selectedId
       ? library.books.find(function (book) { return book.id === selectedId; })
       : (library.books[0] && library.books[0].id ? library.books[0] : null);
@@ -1433,9 +1542,11 @@ $(function () {
     var updateBookList = function () {
       filteredBooks = filterBooks(library.books, currentQuery);
       filteredBooks = sortBooks(filteredBooks, currentSort);
-      var activeId = selectedBook && filteredBooks.some(function (book) { return book.id === selectedBook.id; })
-        ? selectedBook.id
-        : (filteredBooks[0] && filteredBooks[0].id);
+      var activeId = (!hasExplicitSelection && filteredBooks[0] && filteredBooks[0].id)
+        ? filteredBooks[0].id
+        : (selectedBook && filteredBooks.some(function (book) { return book.id === selectedBook.id; })
+          ? selectedBook.id
+          : (filteredBooks[0] && filteredBooks[0].id));
 
       if (activeId) {
         selectedBook = filteredBooks.find(function (book) { return book.id === activeId; }) || selectedBook;
@@ -1484,11 +1595,19 @@ $(function () {
     var selectedBookYear = null;
     var selectedDateKey = null;
 
+    var bookLookup = library.books.reduce(function (map, book) {
+      if (book.id) {
+        map[book.id] = book;
+      }
+      return map;
+    }, {});
+
     var handleDayClickAll = function (dateKey) {
       selectedDateKey = dateKey;
       renderTimeline('timeline-chart', 'timeline-date', dateKey, sessionsByDate, {
         title: 'Reading timeline',
-        hideYAxis: false
+        hideYAxis: false,
+        bookLookup: bookLookup
       });
       renderYearPunchcard('all-punchcard', allSessions, selectedAllYear, '#cd2327', selectedDateKey, sessionsByDate, handleDayClickAll);
       if (selectedBook) {
@@ -1505,7 +1624,8 @@ $(function () {
         var bookSessionsByDate = buildSessionsByDate(bookSessions);
         renderTimeline('timeline-chart', 'timeline-date', dateKey, bookSessionsByDate, {
           title: 'Reading timeline for ' + (selectedBook.title || 'Untitled'),
-          hideYAxis: true
+          hideYAxis: true,
+          bookLookup: bookLookup
         });
         renderYearPunchcard('book-punchcard', bookSessions, selectedBookYear, '#4c7ef3', selectedDateKey, bookSessionsByDate, handleDayClickBook);
       }
@@ -1662,6 +1782,7 @@ $(function () {
 
     var handleHashChange = function () {
       if (!window.location.hash) {
+        hasExplicitSelection = false;
         setView('book');
         return;
       }
@@ -1677,6 +1798,7 @@ $(function () {
       if (hashId) {
         var found = library.books.find(function (book) { return book.id === hashId; });
         if (found) {
+          hasExplicitSelection = true;
           selectedBook = found;
           updateBookList();
           setView('book');
