@@ -40,6 +40,9 @@ ENV PATH="${RVM_DIR}/gems/ruby-3.2.0/bin:${RVM_DIR}/rubies/ruby-3.2.0/bin:${RVM_
 ENV GEM_HOME="${RVM_DIR}/gems/ruby-3.2.0"
 ENV GEM_PATH="${RVM_DIR}/gems/ruby-3.2.0:${RVM_DIR}/gems/ruby-3.2.0@global"
 
+# Install Ruby Sass (deprecated, but requested)
+RUN /bin/bash -l -c "source /etc/profile.d/rvm.sh && gem install sass:3.7.4"
+
 # Install Bundler and project gems
 COPY Gemfile Gemfile.lock* /var/www/html/
 WORKDIR /var/www/html
@@ -57,6 +60,9 @@ COPY . /var/www/html/
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod +x /var/www/html/stats.rb
+
+# Build SCSS to CSS using Ruby Sass
+RUN cd /var/www/html/frontend && sass scss/style.scss css/style.css
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /var/www/html/frontend/uploads \
