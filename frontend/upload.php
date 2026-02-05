@@ -302,14 +302,14 @@ $coversCount = move_kobo_images($imagesDir, $coversDir, $logPath);
 log_line($logPath, "Covers moved: $coversCount");
 
 if (is_file($statsPath)) {
-  $rvmScript = getenv('HOME') . '/.rvm/scripts/rvm';
+  $rvmScript = '/etc/profile.d/rvm.sh';
   $rubyCmd = 'ruby ' . escapeshellarg($statsPath)
     . ' -d ' . escapeshellarg($sqlitePath)
     . ' -o ' . escapeshellarg($outputPath);
   if (is_file($rvmScript)) {
     $cmd = '/bin/bash -lc ' . escapeshellarg(
-      'source ' . escapeshellarg($rvmScript)
-      . ' && rvm use ruby-3.0.0@default && ' . $rubyCmd
+      'source ' . $rvmScript
+      . ' && rvm use ruby-3.2.0@default && ' . $rubyCmd
     );
   } else {
     $cmd = $rubyCmd;

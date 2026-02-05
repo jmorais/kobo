@@ -294,7 +294,7 @@ class Library
   def load_isbn_cache
     return unless File.exist?(isbn_cache_path)
 
-    raw = File.read(isbn_cache_path).to_s.strip
+    raw = File.read(isbn_cache_path, encoding: 'UTF-8').to_s.strip
     return if raw.empty?
 
     parsed = JSON.parse(raw)
@@ -314,7 +314,7 @@ class Library
   def load_existing_data(filepath)
     return {} unless File.exist?(filepath)
 
-    raw = File.read(filepath).to_s.strip
+    raw = File.read(filepath, encoding: 'UTF-8').to_s.strip
     return {} if raw.empty?
 
     JSON.parse(normalize_existing_content(filepath, raw))

@@ -24,20 +24,21 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     procps \
     git \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
-# Install RVM and Ruby 3.0.0
+# Install RVM and Ruby 3.2.0
 ENV RVM_DIR=/usr/local/rvm
 RUN gpg2 --keyserver hkp://keyserver.ubuntu.com --recv-keys \
     409B6B1796C275462A1703113804BB82D39DC0E3 \
     7D2BAF1CF37B13E2069D6956105BD0E739499BDB \
     && curl -sSL https://get.rvm.io | bash -s stable \
-    && /bin/bash -l -c "source /etc/profile.d/rvm.sh && rvm install 3.0.0 && rvm use 3.0.0 --default"
+    && /bin/bash -l -c "source /etc/profile.d/rvm.sh && rvm install 3.2.0 && rvm use 3.2.0 --default"
 
 # Set RVM environment
-ENV PATH="${RVM_DIR}/gems/ruby-3.0.0/bin:${RVM_DIR}/rubies/ruby-3.0.0/bin:${RVM_DIR}/bin:${PATH}"
-ENV GEM_HOME="${RVM_DIR}/gems/ruby-3.0.0"
-ENV GEM_PATH="${RVM_DIR}/gems/ruby-3.0.0:${RVM_DIR}/gems/ruby-3.0.0@global"
+ENV PATH="${RVM_DIR}/gems/ruby-3.2.0/bin:${RVM_DIR}/rubies/ruby-3.2.0/bin:${RVM_DIR}/bin:${PATH}"
+ENV GEM_HOME="${RVM_DIR}/gems/ruby-3.2.0"
+ENV GEM_PATH="${RVM_DIR}/gems/ruby-3.2.0:${RVM_DIR}/gems/ruby-3.2.0@global"
 
 # Install Bundler and project gems
 COPY Gemfile Gemfile.lock* /var/www/html/
