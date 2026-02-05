@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: kobo-stats-reader
     ports:
-      - "8080:80"
+      - "49170:80"
     volumes:
       # Persist uploads and generated data
       - ./frontend/uploads:/var/www/html/frontend/uploads
