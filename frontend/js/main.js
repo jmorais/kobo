@@ -1063,6 +1063,11 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   var container = document.getElementById(targetId);
   var label = document.getElementById(labelId);
   var modal = document.getElementById('timeline-modal');
+  if (modal) {
+    // Set max height and make scrollable
+    modal.style.maxHeight = '90vh';
+    modal.style.overflowY = 'auto';
+  }
   var title = document.getElementById('timeline-title');
   var booksList = document.getElementById('timeline-books');
   var booksSection = document.getElementById('timeline-books-section');
@@ -1155,7 +1160,22 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
       });
     });
   }
-  var books = Array.from(new Set(sessions.map(function (session) { return session.bookTitle; })));
+  // Build books array with cover info
+  var books = [];
+  var bookMeta = {};
+  sessions.forEach(function (session) {
+    var key = session.bookTitle;
+    if (!bookMeta[key]) {
+      var imageId = null;
+      if (session.bookId && config.bookLookup && config.bookLookup[session.bookId]) {
+        imageId = config.bookLookup[session.bookId].image_id || null;
+      } else if (session.bookImageId) {
+        imageId = session.bookImageId;
+      }
+      bookMeta[key] = { title: key, imageId: imageId };
+      books.push(key);
+    }
+  });
   books.sort();
   if (label) {
     var totalMinutes = sessions.reduce(function (sum, session) {
@@ -1171,9 +1191,11 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
       '</div>';
   }
 
-  var margin = { top: 10, right: 20, bottom: 40, left: config.hideYAxis ? 30 : 160 };
+  // Increase cover size by 25%
+  var coverSize = 70;
+  var margin = { top: 10, right: 20, bottom: 40, left: config.hideYAxis ? 30 : coverSize + 8 };
   var width = Math.max(container.clientWidth, 720);
-  var rowHeight = 28;
+  var rowHeight = 90; // Increased to add more vertical spacing between covers
   var height = Math.max(220, margin.top + margin.bottom + books.length * rowHeight);
   var innerWidth = width - margin.left - margin.right;
   var innerHeight = height - margin.top - margin.bottom;
@@ -1193,13 +1215,21 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   var yScale = d3.scaleBand()
     .domain(books)
     .range([0, innerHeight])
-    .padding(0.2);
+    .padding(0.35); // Increase padding for more space between covers
 
   var xAxis = d3.axisBottom(xScale)
     .ticks(8)
     .tickFormat(function (d) { return (d < 10 ? '0' + d : d) + ':00'; });
 
-  var yAxis = d3.axisLeft(yScale);
+  // Custom yAxis with covers
+  var yAxis = d3.axisLeft(yScale)
+    .tickFormat(function (d) {
+      var meta = bookMeta[d];
+      if (meta && meta.imageId) {
+        return '';
+      }
+      return '';
+    });
 
   chart.append('g')
     .attr('class', 'axis axis-x')
@@ -1211,9 +1241,62 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
       .attr('class', 'axis axis-y')
       .call(yAxis);
 
-    var wrapWidth = Math.max(40, margin.left - 24);
-    yAxisGroup.selectAll('text')
-      .call(wrapSvgText, wrapWidth);
+    // Remove default text labels
+    yAxisGroup.selectAll('text').remove();
+
+    // Add cover images as Y axis labels (40px)
+    // Custom tooltip for book covers
+    var coverTooltip = d3.select('body').append('div')
+      .attr('class', 'cover-tooltip')
+      .style('position', 'absolute')
+      .style('pointer-events', 'none')
+      .style('background', '#222')
+      .style('color', '#fff')
+      .style('padding', '6px 12px')
+      .style('border-radius', '6px')
+      .style('font-size', '14px')
+      .style('opacity', 0)
+      .style('z-index', 2000);
+
+    yAxisGroup.selectAll('image')
+      .data(books)
+      .enter()
+      .append('image')
+      .attr('x', -coverSize)
+      .attr('y', function (d) { return yScale(d) + (yScale.bandwidth() - coverSize) / 2; })
+      .attr('width', coverSize)
+      .attr('height', coverSize)
+      .attr('href', function (d) {
+        var meta = bookMeta[d];
+        return meta && meta.imageId ? './covers/' + meta.imageId + ' - N3_LIBRARY_GRID.jpg' : null;
+      })
+      .attr('class', 'yaxis-book-cover')
+      .on('mouseover', function (d) {
+        var meta = bookMeta[d];
+        coverTooltip.text(meta && meta.title ? meta.title : d)
+          .style('opacity', 1)
+          .style('left', (d3.event.pageX + 12) + 'px')
+          .style('top', (d3.event.pageY - 18) + 'px');
+      })
+      .on('mousemove', function () {
+        coverTooltip.style('left', (d3.event.pageX + 12) + 'px')
+          .style('top', (d3.event.pageY - 18) + 'px');
+      })
+      .on('mouseout', function () {
+        coverTooltip.style('opacity', 0);
+      });
+
+    // Add fallback for missing covers (70px)
+    yAxisGroup.selectAll('rect.yaxis-cover-fallback')
+      .data(books.filter(function (d) { return !(bookMeta[d] && bookMeta[d].imageId); }))
+      .enter()
+      .append('rect')
+      .attr('x', -coverSize)
+      .attr('y', function (d) { return yScale(d) + (yScale.bandwidth() - coverSize) / 2; })
+      .attr('width', coverSize)
+      .attr('height', coverSize)
+      .attr('class', 'yaxis-cover-fallback')
+      .attr('fill', '#eee');
   }
 
   var colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(books);
