@@ -61,10 +61,10 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod +x /var/www/html/stats.rb
 
-# Start Sass in watch mode (compressed output)
+# Compile Sass once at build time (compressed output)
 RUN mkdir -p /var/www/html/frontend/css
 WORKDIR /var/www/html/frontend
-CMD ["/bin/sh", "-c", "sass --update scss/:css/ --style compressed & exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+RUN /bin/bash -l -c "sass --no-cache --update scss/:css/ --style compressed || true"
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /var/www/html/frontend/uploads \
