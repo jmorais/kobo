@@ -61,8 +61,10 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod +x /var/www/html/stats.rb
 
-# Build SCSS to CSS using Ruby Sass
-RUN cd /var/www/html/frontend && sass scss/style.scss css/style.css
+# Start Sass in watch mode (compressed output)
+RUN mkdir -p /var/www/html/frontend/css
+WORKDIR /var/www/html/frontend
+CMD ["/bin/sh", "-c", "sass --watch scss/:css/ --style compressed & exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /var/www/html/frontend/uploads \
