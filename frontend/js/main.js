@@ -29,6 +29,29 @@ function normalizeLibrary(raw) {
   return { books: books, last_updated_at: null };
 }
 
+// Application settings (persisted in localStorage)
+var appSettings = (function () {
+  var defaults = { minSessionMinutes: 5, hideEmptyBooks: false };
+  try {
+    var raw = localStorage.getItem('kobo_settings');
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      return Object.assign({}, defaults, parsed);
+    }
+  } catch (e) {
+    // ignore
+  }
+  return defaults;
+})();
+
+function saveAppSettings() {
+  try {
+    localStorage.setItem('kobo_settings', JSON.stringify(appSettings));
+  } catch (e) {
+    // ignore
+  }
+}
+
 function renderLastUpdated(containerId, timestamp) {
   var container = document.getElementById(containerId);
   if (!container) {
@@ -108,7 +131,8 @@ function getLastReadTimestamp(book) {
 
 function countReadingSessions(book, minMinutes) {
   var sessions = safeSessions(book);
-  var minSeconds = (minMinutes || 10) * 60;
+  var min = (typeof minMinutes !== 'undefined') ? minMinutes : (appSettings && appSettings.minSessionMinutes ? appSettings.minSessionMinutes : 5);
+  var minSeconds = (min) * 60;
   return sessions.reduce(function (total, session) {
     var start = Date.parse(session[0]);
     var end = Date.parse(session[1]);
@@ -556,7 +580,8 @@ function collectSessions(books) {
       if (isNaN(start) || isNaN(end)) {
         return;
       }
-      if ((end - start) / 60000 < 5) {
+      var min = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
+      if ((end - start) / 60000 < min) {
         return;
       }
       sessions.push({
@@ -1601,7 +1626,7 @@ $(function () {
 
     library.books = library.books.map(function (book) {
       book._reading_time = calculateReadingTime(book);
-      book._session_count = countReadingSessions(book, 10);
+      book._session_count = countReadingSessions(book); // uses appSettings.minSessionMinutes by default
       book._last_read = getLastReadTimestamp(book);
       return book;
     });
@@ -1625,6 +1650,14 @@ $(function () {
     var updateBookList = function () {
       filteredBooks = filterBooks(library.books, currentQuery);
       filteredBooks = sortBooks(filteredBooks, currentSort);
+      if (appSettings && appSettings.hideEmptyBooks) {
+        filteredBooks = filteredBooks.filter(function (book) {
+          var sessions = book._session_count || 0;
+          var time = book._reading_time || 0;
+          var unread = (book.read_status === 'Unread' || !book.read_status);
+          return !(sessions === 0 && time === 0 && unread);
+        });
+      }
       var activeId = (!hasExplicitSelection && filteredBooks[0] && filteredBooks[0].id)
         ? filteredBooks[0].id
         : (selectedBook && filteredBooks.some(function (book) { return book.id === selectedBook.id; })
@@ -1747,7 +1780,7 @@ $(function () {
     };
 
     renderAllSection();
-    renderGeneralStats('general-stats', computeGeneralStats(library.books, allSessions, 10));
+    renderGeneralStats('general-stats', computeGeneralStats(library.books, allSessions, appSettings.minSessionMinutes));
     renderBookSection();
     var highlightWordsSearch = document.getElementById('highlight-words-search');
     var highlightQuotesSearch = document.getElementById('highlight-quotes-search');
@@ -1920,6 +1953,48 @@ $(function () {
       if (backdrop) {
         backdrop.addEventListener('click', closeTimelineModal);
       }
+    }
+
+    // Settings UI wiring
+    var settingsButton = document.getElementById('settings-link');
+    var settingsModal = document.getElementById('settings-modal');
+    var settingsSave = document.getElementById('settings-save');
+    var settingsCancel = document.getElementById('settings-cancel');
+    var settingsCloseButtons = document.querySelectorAll('.settings-close');
+    var settingMinInput = document.getElementById('setting-min-session');
+    var settingHideEmpty = document.getElementById('setting-hide-empty');
+
+    function openSettings() {
+      if (!settingsModal) return;
+      // populate
+      if (settingMinInput) settingMinInput.value = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
+      if (settingHideEmpty) settingHideEmpty.checked = !!(appSettings && appSettings.hideEmptyBooks);
+      settingsModal.setAttribute('aria-hidden', 'false');
+      settingsModal.classList.add('is-open');
+    }
+
+    function closeSettings() {
+      if (!settingsModal) return;
+      settingsModal.setAttribute('aria-hidden', 'true');
+      settingsModal.classList.remove('is-open');
+    }
+
+    if (settingsButton) {
+      settingsButton.addEventListener('click', function () { openSettings(); });
+    }
+    if (settingsSave) {
+      settingsSave.addEventListener('click', function () {
+        var minVal = parseInt(settingMinInput && settingMinInput.value, 10);
+        if (isNaN(minVal) || minVal < 0) minVal = 0;
+        appSettings.minSessionMinutes = minVal;
+        appSettings.hideEmptyBooks = !!(settingHideEmpty && settingHideEmpty.checked);
+        saveAppSettings();
+        // reload to apply settings across all derived data simply
+        window.location.reload();
+      });
+    }
+    if (settingsCancel && settingsCloseButtons) {
+      settingsCloseButtons.forEach(function (el) { el.addEventListener('click', closeSettings); });
     }
   });
 });

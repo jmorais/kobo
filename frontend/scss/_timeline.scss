@@ -61,12 +61,12 @@
 
 .timeline-popup {
   position: relative;
-  max-width: 960px;
+  max-width: 720px;
   width: 100%;
   background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
   z-index: 1;
   max-height: 90vh;
   overflow-y: auto;
@@ -81,12 +81,12 @@
 
 .timeline-popup {
   position: relative;
-  max-width: 960px;
-  margin: 60px auto;
+  max-width: 720px;
+  margin: 40px auto;
   background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
   z-index: 1;
 }
 
@@ -103,4 +103,8 @@
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+}
+
+.timeline-popup .panel-body {
+  padding: 0;
 }

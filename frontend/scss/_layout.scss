@@ -70,10 +70,28 @@
   }
 }
 
-.last-updated {
-  margin: 30px 0 10px;
-  font-size: 10px;
-  color: #6b7280;
-  opacity: 0.8;
+.last-updated-center {
   text-align: center;
+  margin: 30px 0 10px;
+}
+
+.last-updated,
+.settings-link {
+  font-size: 12px;
+  color: #6b7280;
+  opacity: 0.9;
+  text-decoration: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.last-updated-sep {
+  display: inline-block;
+  margin: 0 10px;
+  color: #6b7280;
+  opacity: 0.6;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
 }
