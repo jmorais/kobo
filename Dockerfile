@@ -64,7 +64,7 @@ RUN chown -R www-data:www-data /var/www/html \
 # Start Sass in watch mode (compressed output)
 RUN mkdir -p /var/www/html/frontend/css
 WORKDIR /var/www/html/frontend
-CMD ["/bin/sh", "-c", "sass --watch scss/:css/ --style compressed & exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/bin/sh", "-c", "sass --update scss/:css/ --style compressed & exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /var/www/html/frontend/uploads \
