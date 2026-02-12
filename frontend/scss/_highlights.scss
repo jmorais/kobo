@@ -35,6 +35,22 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  color: inherit;
+  text-decoration: none;
+
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #cbd5f5;
+    box-shadow: 0 6px 14px rgba(30, 64, 175, 0.08);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+
+  &:focus {
+    outline: none;
+    text-decoration: none;
+  }
 }
 
 .highlight-text {
@@ -53,7 +69,7 @@
     text-decoration: none;
 
     &:hover {
-      text-decoration: underline;
+      text-decoration: none;
     }
   }
 }

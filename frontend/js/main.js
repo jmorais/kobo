@@ -574,12 +574,22 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
         var lookup = encodeURIComponent(item.text.toLowerCase());
         wordLink = '<a class="highlight-link" href="https://dictionary.cambridge.org/dictionary/english/' + lookup + '" target="_blank" rel="noopener">' + item.text + '</a>';
       }
-      return (
-        '<div class="highlight-item">' +
-          '<div class="' + textClass + '">' + wordLink + '</div>' +
-          '<div class="highlight-meta">' + item.bookTitle + ' • ' + dateLabel + '</div>' +
-        '</div>'
-      );
+        if (isWord) {
+          var lookup = encodeURIComponent(item.text.toLowerCase());
+          return (
+            '<a class="highlight-item" href="https://dictionary.cambridge.org/dictionary/english/' + lookup + '" target="_blank" rel="noopener">' +
+              '<div class="' + textClass + '">' + item.text + '</div>' +
+              '<div class="highlight-meta">' + item.bookTitle + ' • ' + dateLabel + '</div>' +
+            '</a>'
+          );
+        }
+
+        return (
+          '<div class="highlight-item">' +
+            '<div class="' + textClass + '">' + wordLink + '</div>' +
+            '<div class="highlight-meta">' + item.bookTitle + ' • ' + dateLabel + '</div>' +
+          '</div>'
+        );
     }).join('');
   };
   renderList(wordsContainer, pagedWords, true);

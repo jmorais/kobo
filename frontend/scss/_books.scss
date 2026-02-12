@@ -7,6 +7,15 @@
   padding-top: 2px;
   padding-right: 4px;
 
+  /* hide native scrollbars but keep scrolling */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
   .book-status {
   }
 
@@ -56,6 +65,15 @@
     border-color: #cbd5f5;
     box-shadow: 0 6px 14px rgba(30, 64, 175, 0.08);
     transform: translateY(-1px);
+  }
+
+  &:focus {
+    outline: none;
+    text-decoration: none;
+  }
+
+  &:hover, &:focus {
+    text-decoration: none;
   }
 
   &.active {
