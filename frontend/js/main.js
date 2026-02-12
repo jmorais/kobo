@@ -31,7 +31,7 @@ function normalizeLibrary(raw) {
 
 // Application settings (persisted in localStorage)
 var appSettings = (function () {
-  var defaults = { minSessionMinutes: 5, hideEmptyBooks: false };
+  var defaults = { minSessionMinutes: 5, hideEmptyBooks: false, newWordsPerPage: 15 };
   try {
     var raw = localStorage.getItem('kobo_settings');
     if (raw) {
@@ -545,6 +545,22 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
   words = sortBy(words, wordSort || 'date');
   quotes = sortBy(quotes, quoteSort || 'date');
 
+  // Pagination for words list
+  var perPage = (appSettings && typeof appSettings.newWordsPerPage !== 'undefined') ? parseInt(appSettings.newWordsPerPage, 10) : 15;
+  if (!perPage || perPage < 1) perPage = 15;
+  var totalWordPages = Math.max(1, Math.ceil(words.length / perPage));
+  var currentWordPage = (typeof window.highlightWordsPage !== 'undefined') ? window.highlightWordsPage : 1;
+  if (currentWordPage < 1) currentWordPage = 1;
+  if (currentWordPage > totalWordPages) currentWordPage = totalWordPages;
+  var pagedWords = words.slice((currentWordPage - 1) * perPage, currentWordPage * perPage);
+
+  // Pagination for quotes list (same per-page setting)
+  var totalQuotePages = Math.max(1, Math.ceil(quotes.length / perPage));
+  var currentQuotePage = (typeof window.highlightQuotesPage !== 'undefined') ? window.highlightQuotesPage : 1;
+  if (currentQuotePage < 1) currentQuotePage = 1;
+  if (currentQuotePage > totalQuotePages) currentQuotePage = totalQuotePages;
+  var pagedQuotes = quotes.slice((currentQuotePage - 1) * perPage, currentQuotePage * perPage);
+
   var renderList = function (container, items, isWord) {
     if (!items.length) {
       container.innerHTML = '<div class="highlight-empty">No highlights yet.</div>';
@@ -566,9 +582,78 @@ function renderHighlights(wordsId, quotesId, books, wordQuery, quoteQuery, wordS
       );
     }).join('');
   };
+  renderList(wordsContainer, pagedWords, true);
+  renderList(quotesContainer, pagedQuotes, false);
 
-  renderList(wordsContainer, words, true);
-  renderList(quotesContainer, quotes, false);
+  // render pager for words
+  try {
+    var pager = document.getElementById(wordsId + '-pager');
+    if (pager) {
+      if (totalWordPages <= 1) {
+        pager.innerHTML = '';
+      } else {
+        var prevDisabled = currentWordPage <= 1 ? ' disabled' : '';
+        var nextDisabled = currentWordPage >= totalWordPages ? ' disabled' : '';
+        pager.innerHTML = '<div class="pager-controls">' +
+          '<button class="btn btn-default btn-sm pager-prev' + prevDisabled + '" data-page="' + (currentWordPage - 1) + '">Prev</button>' +
+          '<span class="pager-info"> Page ' + currentWordPage + ' of ' + totalWordPages + ' </span>' +
+          '<button class="btn btn-default btn-sm pager-next' + nextDisabled + '" data-page="' + (currentWordPage + 1) + '">Next</button>' +
+          '</div>';
+
+        var prevBtn = pager.querySelector('.pager-prev');
+        var nextBtn = pager.querySelector('.pager-next');
+        if (prevBtn) {
+          prevBtn.addEventListener('click', function (ev) {
+            var page = parseInt(ev.currentTarget.getAttribute('data-page'), 10) || 1;
+            if (typeof window.setHighlightWordsPage === 'function') window.setHighlightWordsPage(page);
+          });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', function (ev) {
+            var page = parseInt(ev.currentTarget.getAttribute('data-page'), 10) || 1;
+            if (typeof window.setHighlightWordsPage === 'function') window.setHighlightWordsPage(page);
+          });
+        }
+      }
+    }
+  } catch (e) {
+    // ignore pager errors
+  }
+
+  // render pager for quotes
+  try {
+    var qpager = document.getElementById(quotesId + '-pager');
+    if (qpager) {
+      if (totalQuotePages <= 1) {
+        qpager.innerHTML = '';
+      } else {
+        var qprevDisabled = currentQuotePage <= 1 ? ' disabled' : '';
+        var qnextDisabled = currentQuotePage >= totalQuotePages ? ' disabled' : '';
+        qpager.innerHTML = '<div class="pager-controls">' +
+          '<button class="btn btn-default btn-sm pager-prev' + qprevDisabled + '" data-page="' + (currentQuotePage - 1) + '">Prev</button>' +
+          '<span class="pager-info"> Page ' + currentQuotePage + ' of ' + totalQuotePages + ' </span>' +
+          '<button class="btn btn-default btn-sm pager-next' + qnextDisabled + '" data-page="' + (currentQuotePage + 1) + '">Next</button>' +
+          '</div>';
+
+        var qprevBtn = qpager.querySelector('.pager-prev');
+        var qnextBtn = qpager.querySelector('.pager-next');
+        if (qprevBtn) {
+          qprevBtn.addEventListener('click', function (ev) {
+            var page = parseInt(ev.currentTarget.getAttribute('data-page'), 10) || 1;
+            if (typeof window.setHighlightQuotesPage === 'function') window.setHighlightQuotesPage(page);
+          });
+        }
+        if (qnextBtn) {
+          qnextBtn.addEventListener('click', function (ev) {
+            var page = parseInt(ev.currentTarget.getAttribute('data-page'), 10) || 1;
+            if (typeof window.setHighlightQuotesPage === 'function') window.setHighlightQuotesPage(page);
+          });
+        }
+      }
+    }
+  } catch (e) {
+    // ignore pager errors
+  }
 }
 
 function collectSessions(books) {
@@ -1790,6 +1875,19 @@ $(function () {
     var highlightQuoteQuery = '';
     var highlightWordSort = (highlightWordsSort && highlightWordsSort.value) || 'alpha';
     var highlightQuoteSort = (highlightQuotesSort && highlightQuotesSort.value) || 'date';
+    // pagination state for new words and quotes
+    window.highlightWordsPage = 1;
+    window.setHighlightWordsPage = function (page) {
+      var p = parseInt(page, 10) || 1;
+      window.highlightWordsPage = p;
+      updateHighlights();
+    };
+    window.highlightQuotesPage = 1;
+    window.setHighlightQuotesPage = function (page) {
+      var p = parseInt(page, 10) || 1;
+      window.highlightQuotesPage = p;
+      updateHighlights();
+    };
 
     var updateHighlights = function () {
       renderHighlights(
@@ -1806,6 +1904,7 @@ $(function () {
     if (highlightWordsSearch) {
       highlightWordsSearch.addEventListener('input', function (event) {
         highlightWordQuery = event.target.value || '';
+        window.highlightWordsPage = 1;
         updateHighlights();
       });
     }
@@ -1813,6 +1912,7 @@ $(function () {
     if (highlightQuotesSearch) {
       highlightQuotesSearch.addEventListener('input', function (event) {
         highlightQuoteQuery = event.target.value || '';
+        window.highlightQuotesPage = 1;
         updateHighlights();
       });
     }
@@ -1820,6 +1920,7 @@ $(function () {
     if (highlightWordsSort) {
       highlightWordsSort.addEventListener('change', function (event) {
         highlightWordSort = event.target.value || 'alpha';
+        window.highlightWordsPage = 1;
         updateHighlights();
       });
     }
@@ -1827,6 +1928,7 @@ $(function () {
     if (highlightQuotesSort) {
       highlightQuotesSort.addEventListener('change', function (event) {
         highlightQuoteSort = event.target.value || 'date';
+        window.highlightQuotesPage = 1;
         updateHighlights();
       });
     }
@@ -1963,12 +2065,14 @@ $(function () {
     var settingsCloseButtons = document.querySelectorAll('.settings-close');
     var settingMinInput = document.getElementById('setting-min-session');
     var settingHideEmpty = document.getElementById('setting-hide-empty');
+    var settingNewWordsPerPage = document.getElementById('setting-new-words-per-page');
 
     function openSettings() {
       if (!settingsModal) return;
       // populate
       if (settingMinInput) settingMinInput.value = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
       if (settingHideEmpty) settingHideEmpty.checked = !!(appSettings && appSettings.hideEmptyBooks);
+      if (settingNewWordsPerPage) settingNewWordsPerPage.value = (appSettings && typeof appSettings.newWordsPerPage !== 'undefined') ? appSettings.newWordsPerPage : 15;
       settingsModal.setAttribute('aria-hidden', 'false');
       settingsModal.classList.add('is-open');
     }
@@ -1988,6 +2092,9 @@ $(function () {
         if (isNaN(minVal) || minVal < 0) minVal = 0;
         appSettings.minSessionMinutes = minVal;
         appSettings.hideEmptyBooks = !!(settingHideEmpty && settingHideEmpty.checked);
+        var perPageVal = parseInt(settingNewWordsPerPage && settingNewWordsPerPage.value, 10);
+        if (isNaN(perPageVal) || perPageVal < 1) perPageVal = 15;
+        appSettings.newWordsPerPage = perPageVal;
         saveAppSettings();
         // reload to apply settings across all derived data simply
         window.location.reload();
