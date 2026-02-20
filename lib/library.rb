@@ -183,9 +183,9 @@ class Library
     return 0 if value.nil?
 
     percent = value.to_f
-    if percent > 0 && percent <= 1
-      percent *= 100
-    end
+    # if percent > 0 && percent <= 1
+    #   percent *= 100
+    # end
     percent.round(0).to_i
   end
 
