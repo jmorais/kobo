@@ -180,6 +180,11 @@
             <small class="text-muted">Set to 0 to include all sessions.</small>
           </div>
           <div class="form-group">
+            <label for="setting-max-session">Maximum session length to count (minutes)</label>
+            <input id="setting-max-session" class="form-control" type="number" min="0" step="1" value="300">
+            <small class="text-muted">Sessions longer than this will be ignored. Set to 0 to disable a maximum.</small>
+          </div>
+          <div class="form-group">
             <label for="setting-new-words-per-page">New words per page</label>
             <input id="setting-new-words-per-page" class="form-control" type="number" min="1" step="1" value="15">
             <small class="text-muted">How many new words to show per page in Highlights.</small>

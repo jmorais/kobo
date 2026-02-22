@@ -31,7 +31,7 @@ function normalizeLibrary(raw) {
 
 // Application settings (persisted in localStorage)
 var appSettings = (function () {
-  var defaults = { minSessionMinutes: 5, hideEmptyBooks: false, newWordsPerPage: 15 };
+  var defaults = { minSessionMinutes: 5, hideEmptyBooks: false, newWordsPerPage: 15, maxSessionMinutes: 300 };
   try {
     var raw = localStorage.getItem('kobo_settings');
     if (raw) {
@@ -103,11 +103,19 @@ function calculateReadingTime(book) {
   }
 
   var sessions = safeSessions(book);
+  var min = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
+  var max = (appSettings && typeof appSettings.maxSessionMinutes !== 'undefined') ? appSettings.maxSessionMinutes : 300;
+  var minSeconds = (min) * 60;
+  var maxSeconds = (max && max > 0) ? (max * 60) : Infinity;
+
   var seconds = sessions.reduce(function (total, session) {
     var start = Date.parse(session[0]);
     var end = Date.parse(session[1]);
     if (!isNaN(start) && !isNaN(end)) {
-      total += Math.max(0, (end - start) / 1000);
+      var duration = Math.max(0, (end - start) / 1000);
+      if (duration >= minSeconds && duration <= maxSeconds) {
+        total += duration;
+      }
     }
     return total;
   }, 0);
@@ -131,13 +139,18 @@ function getLastReadTimestamp(book) {
 
 function countReadingSessions(book, minMinutes) {
   var sessions = safeSessions(book);
-  var min = (typeof minMinutes !== 'undefined') ? minMinutes : (appSettings && appSettings.minSessionMinutes ? appSettings.minSessionMinutes : 5);
+  var min = (typeof minMinutes !== 'undefined') ? minMinutes : (appSettings && typeof appSettings.minSessionMinutes !== 'undefined' ? appSettings.minSessionMinutes : 5);
+  var max = (appSettings && typeof appSettings.maxSessionMinutes !== 'undefined') ? appSettings.maxSessionMinutes : 300;
   var minSeconds = (min) * 60;
+  var maxSeconds = (max && max > 0) ? (max * 60) : Infinity;
   return sessions.reduce(function (total, session) {
     var start = Date.parse(session[0]);
     var end = Date.parse(session[1]);
-    if (!isNaN(start) && !isNaN(end) && (end - start) / 1000 >= minSeconds) {
-      total += 1;
+    if (!isNaN(start) && !isNaN(end)) {
+      var duration = (end - start) / 1000;
+      if (duration >= minSeconds && duration <= maxSeconds) {
+        total += 1;
+      }
     }
     return total;
   }, 0);
@@ -676,7 +689,12 @@ function collectSessions(books) {
         return;
       }
       var min = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
-      if ((end - start) / 60000 < min) {
+      var max = (appSettings && typeof appSettings.maxSessionMinutes !== 'undefined') ? appSettings.maxSessionMinutes : 300;
+      var durationMinutes = (end - start) / 60000;
+      if (durationMinutes < min) {
+        return;
+      }
+      if (max && max > 0 && durationMinutes > max) {
         return;
       }
       sessions.push({
@@ -2074,6 +2092,7 @@ $(function () {
     var settingsCancel = document.getElementById('settings-cancel');
     var settingsCloseButtons = document.querySelectorAll('.settings-close');
     var settingMinInput = document.getElementById('setting-min-session');
+    var settingMaxInput = document.getElementById('setting-max-session');
     var settingHideEmpty = document.getElementById('setting-hide-empty');
     var settingNewWordsPerPage = document.getElementById('setting-new-words-per-page');
 
@@ -2081,6 +2100,7 @@ $(function () {
       if (!settingsModal) return;
       // populate
       if (settingMinInput) settingMinInput.value = (appSettings && typeof appSettings.minSessionMinutes !== 'undefined') ? appSettings.minSessionMinutes : 5;
+      if (settingMaxInput) settingMaxInput.value = (appSettings && typeof appSettings.maxSessionMinutes !== 'undefined') ? appSettings.maxSessionMinutes : 300;
       if (settingHideEmpty) settingHideEmpty.checked = !!(appSettings && appSettings.hideEmptyBooks);
       if (settingNewWordsPerPage) settingNewWordsPerPage.value = (appSettings && typeof appSettings.newWordsPerPage !== 'undefined') ? appSettings.newWordsPerPage : 15;
       settingsModal.setAttribute('aria-hidden', 'false');
@@ -2101,6 +2121,9 @@ $(function () {
         var minVal = parseInt(settingMinInput && settingMinInput.value, 10);
         if (isNaN(minVal) || minVal < 0) minVal = 0;
         appSettings.minSessionMinutes = minVal;
+        var maxVal = parseInt(settingMaxInput && settingMaxInput.value, 10);
+        if (isNaN(maxVal) || maxVal < 0) maxVal = 300;
+        appSettings.maxSessionMinutes = maxVal;
         appSettings.hideEmptyBooks = !!(settingHideEmpty && settingHideEmpty.checked);
         var perPageVal = parseInt(settingNewWordsPerPage && settingNewWordsPerPage.value, 10);
         if (isNaN(perPageVal) || perPageVal < 1) perPageVal = 15;
