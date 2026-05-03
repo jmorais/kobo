@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Event Timestamps Pair Editor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; font-size: 15px; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+  h1 { color: #a0c4ff; margin-bottom: 16px; font-size: 1.4em; }
+  h2 { color: #80b0ff; margin: 16px 0 8px; font-size: 1.05em; }
+  .sub { color: #506070; font-size: 0.8em; font-weight: normal; margin-left: 8px; }
+  textarea {
+    width: 100%; background: #0d0d1a; color: #b0ffb0; border: 1px solid #334;
+    padding: 10px; font-family: monospace; font-size: 0.85em; resize: vertical;
+  }
+  textarea[readonly] { color: #80d0a0; }
+  button {
+    padding: 6px 14px; margin: 3px 3px 3px 0; background: #1e3a5f; color: #a0c4ff;
+    border: 1px solid #3a6aaf; cursor: pointer; font-family: monospace; font-size: 0.88em;
+    border-radius: 3px;
+  }
+  button:hover { background: #2a4f80; }
+  button.danger { background: #5f1e1e; color: #ffa0a0; border-color: #af3a3a; }
+  button.danger:hover { background: #802a2a; }
+  button.sample { background: #1e3a28; color: #80e0a0; border-color: #3a6a50; font-size: 0.8em; }
+  button.sample:hover { background: #2a5038; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .section { margin-bottom: 24px; }
+  .actions { margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.82em; }
+  th { background: #1a2e48; color: #90b8e0; padding: 7px 10px; text-align: left; white-space: nowrap; }
+  th.c1020 { color: #70d0ff; }
+  th.c1021 { color: #70ffb0; }
+  td { padding: 4px 8px; border-bottom: 1px solid #1a2535; vertical-align: middle; }
+  tr:hover td { background: #141e2e; }
+  input[type="text"] {
+    background: #0d1825; color: #d0f0d0; border: 1px solid #2a4060;
+    padding: 3px 6px; font-family: monospace; font-size: 0.82em; width: 185px;
+    border-radius: 2px;
+  }
+  input[type="text"].empty-cell { color: #404858; border-color: #202835; }
+  input[type="text"].invalid { border-color: #cc3333; background: #280d0d; color: #ff9090; }
+  .dur { color: #b0b8d0; white-space: nowrap; }
+  .dur.neg { color: #ffaa60; }
+  .idx-col { color: #506070; width: 30px; }
+  .msg { padding: 8px 12px; margin: 6px 0; border-radius: 2px; font-size: 0.85em; }
+  .msg.error { color: #ff8080; background: #280d0d; border: 1px solid #5a1818; }
+  .msg.warn  { color: #ffd070; background: #251a08; border: 1px solid #5a4010; }
+  .export-meta { color: #5a9070; margin-top: 4px; font-size: 0.8em; }
+  tr.row-invalid td { background: #2a0d0d !important; }
+  tr.row-invalid td input[type="text"] { border-color: #803030; }
+  tr.row-invalid .idx-col { color: #cc4444; font-weight: bold; }
+  .info-grid { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 0.88em; }
+  .info-grid .lbl { color: #507090; }
+  .info-grid .val { color: #c8e8ff; word-break: break-all; }
+  .info-grid .val.hex { color: #f0c070; font-size: 0.82em; }
+  #header-section { display: none; }
+  #pairs-section  { display: none; }
+  #export-section { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Event Timestamps Pair Editor</h1>
+
+<!-- Samples -->
+<div class="section">
+  <h2>Samples</h2>
+  <button class="sample" onclick="loadSample('1020', 1)">Sample 1 &rarr; 1020</button>
+  <button class="sample" onclick="loadSample('1021', 2)">Sample 2 &rarr; 1021</button>
+  <button class="sample" onclick="loadSample('1020', 3)">Sample 3 &rarr; 1020 (50 events)</button>
+</div>
+
+<!-- Input -->
+<div class="section">
+  <div class="two-col">
+    <div>
+      <h2 style="color:#70d0ff">Blob 1020</h2>
+      <textarea id="input-1020" rows="5" placeholder="Paste 1020 hex blob&hellip;"></textarea>
+    </div>
+    <div>
+      <h2 style="color:#70ffb0">Blob 1021</h2>
+      <textarea id="input-1021" rows="5" placeholder="Paste 1021 hex blob&hellip;"></textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button onclick="parseBlobs()">Parse Blobs</button>
+  </div>
+</div>
+
+<div id="messages"></div>
+
+<!-- Header info -->
+<div id="header-section" class="section">
+  <h2>Header Info</h2>
+  <div class="two-col">
+    <div>
+      <h2 style="color:#70d0ff;margin-bottom:8px">Blob 1020</h2>
+      <div id="hinfo-1020" class="info-grid"></div>
+    </div>
+    <div>
+      <h2 style="color:#70ffb0;margin-bottom:8px">Blob 1021</h2>
+      <div id="hinfo-1021" class="info-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Pairs table -->
+<div id="pairs-section" class="section">
+  <h2>
+    Event Pairs
+    <span class="sub">display &amp; edit in GMT-4 &nbsp;&bull;&nbsp; stored/exported as UTC</span>
+  </h2>
+  <div class="actions" style="margin-bottom:8px">
+    <button onclick="addPair()">+ Add Pair</button>
+    <button onclick="exportBlobs()">Export Blobs</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th class="idx-col">#</th>
+        <th class="c1020">1020 <span style="font-weight:normal;color:#507090">(GMT-4)</span></th>
+        <th class="c1021">1021 <span style="font-weight:normal;color:#507090">(GMT-4)</span></th>
+        <th>Duration</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="pairs-tbody"></tbody>
+  </table>
+</div>
+
+<!-- Export -->
+<div id="export-section" class="section">
+  <h2>Exported Blobs</h2>
+  <div class="two-col">
+    <div>
+      <h2 style="color:#70d0ff">Blob 1020</h2>
+      <textarea id="export-1020" rows="5" readonly></textarea>
+      <div id="meta-1020" class="export-meta"></div>
+    </div>
+    <div>
+      <h2 style="color:#70ffb0">Blob 1021</h2>
+      <textarea id="export-1021" rows="5" readonly></textarea>
+      <div id="meta-1021" class="export-meta"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+var state = {
+  header1020: null,
+  header1021: null,
+  pairs: []   // [{ epoch1020: number|null, epoch1021: number|null }]
+};
+
+// ── Samples ────────────────────────────────────────────────────────────────
+var SAMPLES = {
+  1: "000000010000001e006500760065006e007400540069006d0065007300740061006d0070007300000009000000002c000000030069e42e53000000030069e4b6d3000000030069e540e8000000030069e6d68f000000030069e831da000000030069e98783000000030069e98a03000000030069e9a8c4000000030069e9ad0c000000030069eadb2e000000030069eb457e000000030069eb55d7000000030069eb5bd7000000030069eb5fed000000030069ebfe0e000000030069ed7b4c000000030069ed7b7b000000030069ed7c94000000030069eecf13000000030069f01ab2000000030069f02210000000030069f02b62000000030069f107f9000000030069f16d09000000030069f24412000000030069f2470c000000030069f2cbcb000000030069f3a13f000000030069f3a908000000030069f3a9d4000000030069f3b4f1000000030069f40696000000030069f40f3a000000030069f40f58000000030069f42033000000030069f424ae000000030069f4252b000000030069f4a7b1000000030069f55c64000000030069f55c6d000000030069f56a43000000030069f5c163000000030069f5c407000000030069f5d425",
+  2: "000000010000001e006500760065006e007400540069006d0065007300740061006d0070007300000009000000002c000000030069e42f59000000030069e4b6d7000000030069e54936000000030069e6db62000000030069e833cb000000030069e989fd000000030069e99aa1000000030069e9ad04000000030069e9ae17000000030069eadccb000000030069eb5591000000030069eb56ef000000030069eb5feb000000030069eb60cf000000030069ebfe15000000030069ed7b52000000030069ed7c92000000030069ed8645000000030069eed7ff000000030069f020f3000000030069f025b7000000030069f02ce2000000030069f10b7e000000030069f16f13000000030069f24701000000030069f2487c000000030069f2d06d000000030069f3a904000000030069f3a9d0000000030069f3b43b000000030069f3ba5a000000030069f4069c000000030069f40f50000000030069f4206c000000030069f42070000000030069f424b1000000030069f42530000000030069f4a7b6000000030069f55c6a000000030069f56a3f000000030069f56a95000000030069f5c40a000000030069f5d422000000030069f5d545",
+  3: "000000010000001e006500760065006e007400540069006d0065007300740061006d00700073000000090000000032000000030069a8f0c2000000030069aa3b2e000000030069aa3ebd000000030069ab51ae000000030069ab6804000000030069acef98000000030069adfdb4000000030069ae3efa000000030069ae478a000000030069ae478c000000030069af6867000000030069af6e6b000000030069af77bb000000030069af81e5000000030069af881f000000030069af882d000000030069af8843000000030069b232d6000000030069b3610c000000030069b37216000000030069b37222000000030069b38575000000030069b48544000000030069b4b72d000000030069b4b821000000030069b4bb63000000030069b4d69b000000030069b4d6a1000000030069b4d8ca000000030069b4de63000000030069b4ec18000000030069b4edaf000000030069b61ebe000000030069b627a1000000030069b627b6000000030069b77bda000000030069b8ca29000000030069ba1bc2000000030069bb5d48000000030069bb6d26000000030069bcbe47000000030069be05aa000000030069be0afe000000030069bf592b000000030069c07945000000030069c0855c000000030069c08e37000000030069c0b7da000000030069c0beda000000030069c1f649"
+};
+
+function loadSample(slot, n) {
+  document.getElementById("input-" + slot).value = SAMPLES[n];
+}
+
+// ── Hex utilities ──────────────────────────────────────────────────────────
+function hexToBytes(hex) {
+  hex = hex.trim().replace(/\s+/g, "");
+  if (hex.length % 2 !== 0) throw new Error("Odd-length hex string (" + hex.length + " chars).");
+  if (/[^0-9a-fA-F]/.test(hex)) throw new Error("Non-hex characters detected.");
+  var bytes = new Uint8Array(hex.length / 2);
+  for (var i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return bytes;
+}
+
+function bytesToHex(bytes) {
+  var out = "";
+  for (var i = 0; i < bytes.length; i++) out += ("00" + bytes[i].toString(16)).slice(-2);
+  return out;
+}
+
+function readUInt32BE(bytes, offset) {
+  return ((bytes[offset] << 24) | (bytes[offset+1] << 16) |
+          (bytes[offset+2] <<  8) | bytes[offset+3]) >>> 0;
+}
+
+// ── Blob parsing ───────────────────────────────────────────────────────────
+function parseHexBlob(hex) {
+  var bytes    = hexToBytes(hex);
+  var warnings = [];
+
+  if (bytes.length < 16) throw new Error("Blob too short.");
+
+  var lenName     = readUInt32BE(bytes, 4);
+  var nameLen     = lenName + 1;
+  var headerEnd   = 8 + nameLen + 4 + 4;
+  var countOffset = headerEnd - 4;
+
+  if (bytes.length < headerEnd) throw new Error("Blob too short after name field.");
+
+  var storedCount  = readUInt32BE(bytes, countOffset);
+  var entriesStart = headerEnd;
+  var entryBytes   = bytes.length - entriesStart;
+  var entryCount   = Math.floor(entryBytes / 9);
+
+  if (entryBytes % 9 !== 0)
+    warnings.push("Entry region (" + entryBytes + " bytes) not divisible by 9.");
+  if (entryCount !== storedCount)
+    warnings.push("Header count says " + storedCount + " but parsed " + entryCount + " entries.");
+
+  var events = [];
+  for (var i = 0; i < entryCount; i++) {
+    var off = entriesStart + i * 9;
+    if (bytes[off] !== 0 || bytes[off+1] !== 0 || bytes[off+2] !== 0 || bytes[off+3] !== 3)
+      warnings.push("Entry " + i + ": unexpected marker " +
+        bytesToHex(bytes.slice(off, off+4)).toUpperCase() + " (expected 00000003).");
+    if (bytes[off+4] !== 0)
+      warnings.push("Entry " + i + ": unexpected pad byte 0x" + bytes[off+4].toString(16) + ".");
+    events.push({ epoch: readUInt32BE(bytes, off + 5) });
+  }
+
+  var records = readUInt32BE(bytes, 0);
+  var nameBytes = bytes.slice(8, 8 + nameLen - 1);
+  var decodedName = decodeUTF16BE(nameBytes);
+  var rawHeaderHex = bytesToHex(bytes.slice(0, headerEnd)).toUpperCase();
+  var rawCountHex  = bytesToHex(bytes.slice(countOffset, countOffset + 4)).toUpperCase();
+
+  return { headerPrefix: bytes.slice(0, countOffset), events: events, warnings: warnings,
+           records: records, lenName: lenName, decodedName: decodedName,
+           rawHeaderHex: rawHeaderHex, rawCountHex: rawCountHex,
+           storedCount: storedCount, entryCount: entryCount };
+}
+
+// ── Name decoding (UTF-16BE) ──────────────────────────────────────────────
+function decodeUTF16BE(bytes) {
+  var chars = [];
+  for (var i = 0; i + 1 < bytes.length; i += 2) {
+    var code = (bytes[i] << 8) | bytes[i + 1];
+    if (code !== 0) chars.push(String.fromCharCode(code));
+  }
+  return chars.join("");
+}
+
+// ── Date/time — GMT-4 display ──────────────────────────────────────────────
+// Epochs are always UTC. Display/edit uses GMT-4 (UTC - 4 h).
+var GMT_OFFSET_S = 4 * 3600;
+
+function pad2(n) { return ("00"   + n).slice(-2); }
+function pad4(n) { return ("0000" + n).slice(-4); }
+
+function epochToDisplay(epoch) {
+  // Subtract 4 h then format with UTC methods -> gives GMT-4 time
+  var d = new Date((epoch - GMT_OFFSET_S) * 1000);
+  return pad4(d.getUTCFullYear()) + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()) +
+         " " + pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes()) + ":" + pad2(d.getUTCSeconds());
+}
+
+function displayToEpoch(str) {
+  // User types GMT-4. Parse as fake-UTC then add 4 h to recover real UTC epoch.
+  var m = str.trim().match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  var ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  if (isNaN(ms)) return null;
+  return Math.floor(ms / 1000) + GMT_OFFSET_S;
+}
+
+// ── Duration ───────────────────────────────────────────────────────────────
+function formatDuration(e1020, e1021) {
+  if (e1020 === null || e1021 === null) return "";
+  var diff = e1021 - e1020;
+  var abs  = Math.abs(diff);
+  var sign = diff < 0 ? "-" : "";
+  if (abs < 3600) return sign + (abs / 60).toFixed(1) + " min";
+  return sign + (abs / 3600).toFixed(2) + " h";
+}
+
+// ── Count encoding ─────────────────────────────────────────────────────────
+function encodeRawCount(count) {
+  if (count < 0 || count > 255) throw new Error("Event count must be 0-255.");
+  return [0, 0, 0, count];
+}
+
+// ── Parse both blobs ───────────────────────────────────────────────────────
+function parseBlobs() {
+  clearMessages();
+  document.getElementById("export-section").style.display = "none";
+
+  var hex1020 = document.getElementById("input-1020").value.trim();
+  var hex1021 = document.getElementById("input-1021").value.trim();
+
+  if (!hex1020 && !hex1021) { showError("Provide at least one blob."); return; }
+
+  var r1020 = null, r1021 = null;
+
+  if (hex1020) {
+    try { r1020 = parseHexBlob(hex1020); r1020.warnings.forEach(function(w) { showWarn("[1020] " + w); }); }
+    catch(e) { showError("[1020] " + e.message); return; }
+  }
+  if (hex1021) {
+    try { r1021 = parseHexBlob(hex1021); r1021.warnings.forEach(function(w) { showWarn("[1021] " + w); }); }
+    catch(e) { showError("[1021] " + e.message); return; }
+  }
+
+  state.header1020 = r1020 ? r1020.headerPrefix : null;
+  state.header1021 = r1021 ? r1021.headerPrefix : null;
+
+  renderHeaderInfo("1020", r1020);
+  renderHeaderInfo("1021", r1021);
+  document.getElementById("header-section").style.display = "block";
+
+  var ev1020 = r1020 ? r1020.events : [];
+  var ev1021 = r1021 ? r1021.events : [];
+  var len    = Math.max(ev1020.length, ev1021.length);
+
+  state.pairs = [];
+  for (var i = 0; i < len; i++) {
+    state.pairs.push({
+      epoch1020: i < ev1020.length ? ev1020[i].epoch : null,
+      epoch1021: i < ev1021.length ? ev1021[i].epoch : null
+    });
+  }
+
+  renderTable();
+  document.getElementById("pairs-section").style.display = "block";
+}
+
+// ── Header info panel ─────────────────────────────────────────────────────
+function renderHeaderInfo(slot, r) {
+  var el = document.getElementById("hinfo-" + slot);
+  if (!r) {
+    el.innerHTML = '<div class="lbl" style="grid-column:1/-1;color:#405060">(not parsed)</div>';
+    return;
+  }
+  function row(label, value, isHex) {
+    return '<div class="lbl">' + label + '</div>' +
+           '<div class="val' + (isHex ? ' hex' : '') + '">' + escHtml(String(value)) + '</div>';
+  }
+  el.innerHTML =
+    row('records',         r.records) +
+    row('len_name',        r.lenName) +
+    row('name',            r.decodedName) +
+    row('count (header)',  r.storedCount) +
+    row('count (parsed)',  r.entryCount) +
+    row('raw count hex',   r.rawCountHex, true) +
+    row('raw header hex',  r.rawHeaderHex, true);
+}
+
+// ── Render table ───────────────────────────────────────────────────────────
+function renderTable() {
+  var tbody = document.getElementById("pairs-tbody");
+  tbody.innerHTML = "";
+  state.pairs.forEach(function(pair, idx) { tbody.appendChild(makeRow(pair, idx)); });
+  validateRows();
+}
+
+function makeRow(pair, idx) {
+  var tr  = document.createElement("tr");
+  var dur = formatDuration(pair.epoch1020, pair.epoch1021);
+  var durClass = "dur" + (dur && dur.charAt(0) === "-" ? " neg" : "");
+  var v1020 = pair.epoch1020 !== null ? epochToDisplay(pair.epoch1020) : "";
+  var v1021 = pair.epoch1021 !== null ? epochToDisplay(pair.epoch1021) : "";
+
+  tr.innerHTML =
+    '<td class="idx-col">' + (idx + 1) + '</td>' +
+    '<td><input type="text" data-idx="' + idx + '" data-field="1020"' +
+      ' class="' + (pair.epoch1020 === null ? "empty-cell" : "") + '"' +
+      ' value="' + escHtml(v1020) + '" placeholder="(empty)" onchange="onCellChange(this)"></td>' +
+    '<td><input type="text" data-idx="' + idx + '" data-field="1021"' +
+      ' class="' + (pair.epoch1021 === null ? "empty-cell" : "") + '"' +
+      ' value="' + escHtml(v1021) + '" placeholder="(empty)" onchange="onCellChange(this)"></td>' +
+    '<td class="' + durClass + '">' + (dur || "&mdash;") + '</td>' +
+    '<td><button class="danger" onclick="removePair(' + idx + ')">Remove</button></td>';
+
+  return tr;
+}
+
+function onCellChange(input) {
+  var idx   = +input.dataset.idx;
+  var field = input.dataset.field;
+  var val   = input.value.trim();
+
+  if (val === "") {
+    state.pairs[idx]["epoch" + field] = null;
+    input.className = "empty-cell";
+    refreshDurationCell(idx);
+    return;
+  }
+
+  var epoch = displayToEpoch(val);
+  if (epoch === null) { input.className = "invalid"; return; }
+
+  input.className = "";
+  state.pairs[idx]["epoch" + field] = epoch;
+  refreshDurationCell(idx);
+}
+
+function refreshDurationCell(idx) {
+  var tbody = document.getElementById("pairs-tbody");
+  var tr = tbody.rows[idx];
+  if (!tr) return;
+  var pair = state.pairs[idx];
+  var dur  = formatDuration(pair.epoch1020, pair.epoch1021);
+  var td   = tr.cells[3];
+  td.innerHTML   = dur || "&mdash;";
+  td.className   = "dur" + (dur && dur.charAt(0) === "-" ? " neg" : "");
+  validateRows();
+}
+
+// ── Row validation (order + overlap) ──────────────────────────────────────
+// A row is invalid if:
+//   • its 1020 timestamp is not strictly greater than the previous row's 1020
+//   • its 1021 timestamp is not strictly greater than the previous row's 1021
+//   • its 1020 timestamp is less than the previous row's 1021 (overlap)
+// Rows with null on both sides are skipped.
+function validateRows() {
+  var tbody = document.getElementById("pairs-tbody");
+  var n = state.pairs.length;
+  for (var i = 0; i < n; i++) {
+    var tr      = tbody.rows[i];
+    if (!tr) continue;
+    var cur     = state.pairs[i];
+    var invalid = false;
+
+    if (i > 0) {
+      var prev = state.pairs[i - 1];
+      // 1020 column: must be strictly ascending
+      if (cur.epoch1020 !== null && prev.epoch1020 !== null) {
+        if (cur.epoch1020 <= prev.epoch1020) invalid = true;
+      }
+      // 1021 column: must be strictly ascending
+      if (cur.epoch1021 !== null && prev.epoch1021 !== null) {
+        if (cur.epoch1021 <= prev.epoch1021) invalid = true;
+      }
+      // Overlap: this row's 1020 must be after (or equal to) the previous row's 1021
+      if (cur.epoch1020 !== null && prev.epoch1021 !== null) {
+        if (cur.epoch1020 < prev.epoch1021) invalid = true;
+      }
+    }
+
+    if (invalid) {
+      tr.classList.add("row-invalid");
+    } else {
+      tr.classList.remove("row-invalid");
+    }
+  }
+}
+
+// ── Add / Remove ───────────────────────────────────────────────────────────
+function addPair() {
+  var now = Math.floor(Date.now() / 1000);
+  state.pairs.push({ epoch1020: now, epoch1021: now });
+  renderTable();
+}
+
+function removePair(idx) {
+  state.pairs.splice(idx, 1);
+  renderTable();
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function buildBlob(headerPrefix, events) {
+  var rawCount = encodeRawCount(events.length);
+  var out = new Uint8Array(headerPrefix.length + 4 + events.length * 9);
+  var pos = 0;
+
+  out.set(headerPrefix, pos); pos += headerPrefix.length;
+  out[pos++] = rawCount[0]; out[pos++] = rawCount[1];
+  out[pos++] = rawCount[2]; out[pos++] = rawCount[3];
+
+  events.forEach(function(ev) {
+    var ts = ev.epoch >>> 0;
+    out[pos++] = 0x00; out[pos++] = 0x00; out[pos++] = 0x00; out[pos++] = 0x03;
+    out[pos++] = 0x00;
+    out[pos++] = (ts >>> 24) & 0xff;
+    out[pos++] = (ts >>> 16) & 0xff;
+    out[pos++] = (ts >>>  8) & 0xff;
+    out[pos++] =  ts         & 0xff;
+  });
+
+  return out;
+}
+
+function exportBlobs() {
+  clearMessages();
+
+  if (document.querySelectorAll("#pairs-tbody input.invalid").length > 0) {
+    showError("Fix invalid timestamp fields before exporting.");
+    return;
+  }
+
+  var section  = document.getElementById("export-section");
+  var exported = false;
+
+  function writeSlot(slot, headerKey) {
+    var header = state[headerKey];
+    var outEl  = document.getElementById("export-" + slot);
+    var metaEl = document.getElementById("meta-" + slot);
+
+    if (!header) {
+      outEl.value        = "";
+      metaEl.textContent = "(no " + slot + " blob was parsed)";
+      return;
+    }
+
+    var events = state.pairs
+      .filter(function(p) { return p["epoch" + slot] !== null; })
+      .map(function(p)    { return { epoch: p["epoch" + slot] }; });
+
+    try {
+      var bytes  = buildBlob(header, events);
+      var hexOut = bytesToHex(bytes).toUpperCase();
+      outEl.value        = hexOut;
+      metaEl.textContent = "Characters: " + hexOut.length +
+                           "  |  Bytes: " + bytes.length +
+                           "  |  Timestamps: " + events.length;
+      exported = true;
+    } catch(e) {
+      showError("[" + slot + " export] " + e.message);
+    }
+  }
+
+  writeSlot("1020", "header1020");
+  writeSlot("1021", "header1021");
+
+  if (exported) {
+    section.style.display = "block";
+    section.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function clearMessages() { document.getElementById("messages").innerHTML = ""; }
+
+function showError(msg) {
+  document.getElementById("messages").innerHTML +=
+    '<div class="msg error">Error: ' + escHtml(msg) + '</div>';
+}
+
+function showWarn(msg) {
+  document.getElementById("messages").innerHTML +=
+    '<div class="msg warn">Warning: ' + escHtml(msg) + '</div>';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                  .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
