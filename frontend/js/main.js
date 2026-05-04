@@ -134,6 +134,16 @@ function safeSessions(book) {
   });
 }
 
+// Normalize session timestamp "YYYY-MM-DD HH:MM:SS ±HHMM" to ISO 8601 for Safari compatibility
+function parseSessionDate(value) {
+  if (!value) { return NaN; }
+  var normalized = String(value).replace(
+    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-])(\d{2})(\d{2})$/,
+    '$1T$2$3$4:$5'
+  );
+  return Date.parse(normalized);
+}
+
 function calculateReadingTime(book) {
   if (typeof book.reading_time === 'number' && !isNaN(book.reading_time)) {
     return book.reading_time;
@@ -146,8 +156,8 @@ function calculateReadingTime(book) {
   var maxSeconds = (max && max > 0) ? (max * 60) : Infinity;
 
   var seconds = sessions.reduce(function (total, session) {
-    var start = Date.parse(session[0]);
-    var end = Date.parse(session[1]);
+    var start = parseSessionDate(session[0]);
+    var end = parseSessionDate(session[1]);
     if (!isNaN(start) && !isNaN(end)) {
       var duration = Math.max(0, (end - start) / 1000);
       if (duration >= minSeconds && duration <= maxSeconds) {
@@ -164,7 +174,7 @@ function getLastReadTimestamp(book) {
   var sessions = safeSessions(book);
   var latest = null;
   sessions.forEach(function (session) {
-    var end = Date.parse(session[1]);
+    var end = parseSessionDate(session[1]);
     if (!isNaN(end)) {
       if (latest === null || end > latest) {
         latest = end;
@@ -181,8 +191,8 @@ function countReadingSessions(book, minMinutes) {
   var minSeconds = (min) * 60;
   var maxSeconds = (max && max > 0) ? (max * 60) : Infinity;
   return sessions.reduce(function (total, session) {
-    var start = Date.parse(session[0]);
-    var end = Date.parse(session[1]);
+    var start = parseSessionDate(session[0]);
+    var end = parseSessionDate(session[1]);
     if (!isNaN(start) && !isNaN(end)) {
       var duration = (end - start) / 1000;
       if (duration >= minSeconds && duration <= maxSeconds) {
@@ -720,8 +730,8 @@ function collectSessions(books) {
   var sessions = [];
   books.forEach(function (book) {
     safeSessions(book).forEach(function (session) {
-      var start = new Date(session[0]);
-      var end = new Date(session[1]);
+      var start = new Date(parseSessionDate(session[0]));
+      var end = new Date(parseSessionDate(session[1]));
       if (isNaN(start) || isNaN(end)) {
         return;
       }
