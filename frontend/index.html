@@ -32,7 +32,7 @@
               <h1>Reading Stats</h1>
               <p class="lead">All books sorted by reading time, plus per-book and overall punchcards.</p>
             </div>
-            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">&#9788; Light</button>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode" style="display:none">&#9788; Light</button>
           </div>
         </div>
       </div>
@@ -43,6 +43,8 @@
             <button id="view-by-book" class="view-button active" type="button">By Book</button>
             <button id="view-all" class="view-button" type="button">All</button>
             <button id="view-highlights" class="view-button" type="button">Highlights</button>
+            <button id="view-words" class="view-button mobile-only" type="button">Words</button>
+            <button id="view-quotes" class="view-button mobile-only" type="button">Quotes</button>
           </div>
         </div>
       </div>
@@ -75,6 +77,7 @@
         <div class="col-md-7 col-sm-12">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading book-detail-heading">
+              <button class="mobile-back" id="mobile-back" aria-label="Back to book list">&#8592; Back</button>
               <h3 class="panel-title">Book details</h3>
               <div id="book-status-header" class="book-status-header"></div>
             </div>
@@ -114,8 +117,8 @@
         </div>
       </div>
 
-      <div id="highlights-section" class="row row-equal" hidden>
-        <div class="col-md-6 col-sm-12">
+      <div id="highlights-section" class="row row-equal" hidden data-highlight="words">
+        <div class="col-md-6 col-sm-12" id="highlights-words-col">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading">
               <h3 class="panel-title">New words</h3>
@@ -134,7 +137,7 @@
             </div>
           </div>
         </div>
-        <div class="col-md-6 col-sm-12">
+        <div class="col-md-6 col-sm-12" id="highlights-quotes-col">
           <div class="panel panel-default panel-soft">
             <div class="panel-heading">
               <h3 class="panel-title">Quotes</h3>
@@ -183,6 +186,12 @@
         <button class="timeline-close settings-close" type="button" aria-label="Close">×</button>
         <div class="section-title" id="settings-title">Settings</div>
         <div class="panel-body">
+          <div class="form-group">
+            <label>Theme</label>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <button id="theme-toggle-modal" class="btn btn-default" type="button">&#9788; Light</button>
+            </div>
+          </div>
           <div class="form-group">
             <label for="setting-min-session">Minimum session length to count (minutes)</label>
             <input id="setting-min-session" class="form-control" type="number" min="0" step="1" value="5">

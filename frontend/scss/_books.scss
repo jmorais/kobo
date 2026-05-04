@@ -35,7 +35,8 @@
     border-radius: 3px;
     border: 1px solid var(--border-subtle);
     box-shadow: none;
-    padding: 10px 12px;
+    padding: 0 12px;
+    height: 34px;
     font-size: 12px;
     background: var(--surface);
     color: var(--text-primary);
@@ -122,6 +123,16 @@
 }
 
 .book-detail {
+  // Desktop: grid that restores "meta inside header" look
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "cover text  donut"
+    "cover meta  donut"
+    "stats stats stats";
+  column-gap: 16px;
+
   h2 {
     margin: 0 0 6px;
     font-size: 20px;
@@ -130,53 +141,51 @@
   }
 }
 
+// Flatten .book-header's children into the parent grid
 .book-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 12px;
+  display: contents;
+}
+
+.book-cover {
+  grid-area: cover;
+  align-self: start;
 }
 
 .book-header-text {
-  flex: 1;
+  grid-area: text;
+  min-width: 0;
+}
 
-  .book-header-meta {
-    margin-top: 12px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
+.percent-donut {
+  grid-area: donut;
+  align-self: start;
+}
 
-    > div {
-      background: var(--surface-alt);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      padding: 8px 10px;
-      font-size: 11px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      min-height: 34px;
-    }
-  }
+.book-header-meta {
+  grid-area: meta;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
 
-  .book-status {
-    margin-top: 0;
-  }
-  
-  .book-time {
-    margin-top: 0;
-  }
+.book-stats {
+  grid-area: stats;
+}
 
-  .book-chapters {
-    margin-top: 0;
-  }
+.book-header-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
 
-  .book-turns {
-    margin-top: 0;
-  }
-
-  .book-highlights {
-    margin-top: 0;
+  > div {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    min-height: 34px;
   }
 }
 

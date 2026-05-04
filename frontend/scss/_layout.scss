@@ -140,3 +140,12 @@
     color: #fff;
   }
 }
+
+// Hidden on desktop; shown on mobile via _responsive.scss
+.mobile-back {
+  display: none;
+}
+
+.mobile-only {
+  display: none;
+}

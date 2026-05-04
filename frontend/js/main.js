@@ -2,11 +2,15 @@
 (function () {
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    var btn = document.getElementById('theme-toggle');
-    if (btn) {
-      btn.innerHTML = theme === 'dark' ? '&#9788; Light' : '&#9790; Dark';
-      btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-    }
+    var label = theme === 'dark' ? '&#9788; Light' : '&#9790; Dark';
+    var ariaLabel = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    ['theme-toggle', 'theme-toggle-modal'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn) {
+        btn.innerHTML = label;
+        btn.setAttribute('aria-label', ariaLabel);
+      }
+    });
     if (typeof window.redrawPunchcards === 'function') {
       window.redrawPunchcards();
     }
@@ -16,15 +20,18 @@
     var saved = localStorage.getItem('kobo_theme') || 'dark';
     applyTheme(saved);
 
-    var btn = document.getElementById('theme-toggle');
-    if (btn) {
-      btn.addEventListener('click', function () {
-        var current = document.documentElement.getAttribute('data-theme') || 'dark';
-        var next = current === 'dark' ? 'light' : 'dark';
-        applyTheme(next);
-        try { localStorage.setItem('kobo_theme', next); } catch (e) {}
-      });
+    function handleThemeClick() {
+      var current = document.documentElement.getAttribute('data-theme') || 'dark';
+      var next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem('kobo_theme', next); } catch (e) {}
     }
+
+    var btn = document.getElementById('theme-toggle');
+    if (btn) { btn.addEventListener('click', handleThemeClick); }
+
+    var modalBtn = document.getElementById('theme-toggle-modal');
+    if (modalBtn) { modalBtn.addEventListener('click', handleThemeClick); }
   });
 })();
 
@@ -965,7 +972,14 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   var dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   var isBookView = targetId === 'book-punchcard';
+  var isMobile = window.matchMedia('(max-width: 768px)').matches;
   var resolveBookRow = function (date) {
+    if (isMobile) {
+      if (date.getFullYear() < year) return 0;
+      if (date.getFullYear() > year) return 3;
+      var m = date.getMonth();
+      return m < 3 ? 0 : m < 6 ? 1 : m < 9 ? 2 : 3;
+    }
     if (!isBookView) {
       return 0;
     }
@@ -978,10 +992,10 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
     }
     return date.getMonth() < 6 ? 0 : 1;
   };
-  var margin = isBookView
+  var margin = (isBookView || isMobile)
     ? { top: 28, right: 6, bottom: 16, left: 6 }
     : { top: 30, right: 8, bottom: 20, left: 6 };
-    var containerWidth = Math.max(1, Math.floor(container.getBoundingClientRect().width || container.clientWidth || 720));
+    var containerWidth = Math.max(1, Math.floor(container.getBoundingClientRect().width || container.clientWidth || window.innerWidth || 720));
     var innerWidth = containerWidth - margin.left - margin.right;
 
   var totalsByDate = dayTotals.reduce(function (map, entry) {
@@ -1006,8 +1020,8 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var weeksCount = Math.ceil(allDays.length / 7);
   var cellGap = 2;
   var monthGapMultiplier = 1;
-  var rowCount = isBookView ? 2 : 1;
-  var rowStartMonths = isBookView ? [0, 6] : [0];
+  var rowCount = isMobile ? 4 : (isBookView ? 2 : 1);
+  var rowStartMonths = isMobile ? [0, 3, 6, 9] : (isBookView ? [0, 6] : [0]);
   var rowGap = 28;
 
   var rowBaseWeek = new Array(rowCount).fill(null);
@@ -1046,7 +1060,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   var cellSize = Math.max(12, Math.floor((innerWidth - (maxWeeks - 1) * cellGap) / denominator));
   var monthGap = (cellSize + cellGap) * monthGapMultiplier;
   var unit = cellSize + cellGap;
-  var height = margin.top + margin.bottom + (unit * 7 - cellGap) * rowCount + (rowCount > 1 ? rowGap : 0);
+  var height = margin.top + margin.bottom + (unit * 7 - cellGap) * rowCount + (rowCount > 1 ? rowGap * (rowCount - 1) : 0);
 
   var maxMinutes = d3.max(dayTotals, function (d) { return d.totalMinutes; }) || 1;
   var score = function (minutes) {
@@ -1085,7 +1099,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   };
 
   var cellY = function (index) {
-    if (!isBookView) {
+    if (!isBookView && !isMobile) {
       return allDays[index].getDay() * unit;
     }
     var date = allDays[index];
@@ -1134,7 +1148,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
     var startX = cellX(range.startIndex);
     var endX = cellX(range.endIndex) + cellSize;
     var labelX = (startX + endX) / 2;
-    var labelRow = isBookView && monthIndex >= 6 ? 1 : 0;
+    var labelRow = isMobile ? (monthIndex < 3 ? 0 : monthIndex < 6 ? 1 : monthIndex < 9 ? 2 : 3) : (isBookView && monthIndex >= 6 ? 1 : 0);
     if (monthIndex === 0 || labelX - lastLabelX[labelRow] >= minLabelGap) {
       var rowOffset = labelRow * ((unit * 7 - cellGap) + rowGap);
       centeredMonthLabels.push({ month: monthIndex, x: labelX, y: rowOffset - 6 });
@@ -1696,11 +1710,12 @@ function renderBookDetail(book) {
   var quotesCount = highlights.filter(function (highlight) { return highlight.type === 'quote'; }).length;
   var highlightsLine = '<div class="book-highlights">' + newWordsCount + ' new words • ' + quotesCount + ' quotes</div>';
   var statusBadge = '<span class="status-badge ' + statusClass + '">' + statusText + '</span>';
-  var headerMeta = '<div class="book-header-meta">' + chaptersLine + totalTimeLine + highlightsLine + pageTurnsLine + '</div>';
+  var headerMeta = document.createElement('div');
+  headerMeta.className = 'book-header-meta';
+  headerMeta.innerHTML = chaptersLine + totalTimeLine + highlightsLine + pageTurnsLine;
   headerText.innerHTML = '<h2>' + (book.title || 'Untitled') + '</h2>' +
     '<div class="book-subtitle">' + (book.author || 'Unknown author') + '</div>' +
-    seriesLine +
-    headerMeta;
+    seriesLine;
 
   if (statusHeader) {
     statusHeader.innerHTML = statusBadge;
@@ -1730,6 +1745,7 @@ function renderBookDetail(book) {
   stats.appendChild(metrics);
 
   detail.appendChild(header);
+  detail.appendChild(headerMeta);
   detail.appendChild(stats);
 
   // punchcard is rendered by year selection
@@ -1849,6 +1865,42 @@ $(function () {
     updateBookList();
 
     var allSessions = collectSessions(library.books);
+
+    // ── Mobile navigation ────────────────────────────────────────────────────
+    var isMobile = function () { return window.matchMedia('(max-width: 768px)').matches; };
+
+    var openMobileDetail = function () {
+      if (isMobile()) {
+        document.body.classList.add('mobile-detail-open');
+        window.scrollTo(0, 0);
+        // Re-render book punchcard now that its container is visible
+        setTimeout(function () {
+          if (typeof window.redrawPunchcards === 'function') {
+            window.redrawPunchcards();
+          }
+        }, 50);
+      }
+    };
+
+    var closeMobileDetail = function () {
+      document.body.classList.remove('mobile-detail-open');
+      window.scrollTo(0, 0);
+    };
+
+    var mobileBackBtn = document.getElementById('mobile-back');
+    if (mobileBackBtn) {
+      mobileBackBtn.addEventListener('click', closeMobileDetail);
+    }
+
+    // Intercept book-list clicks on mobile to open detail screen
+    var bookListEl = document.getElementById('book-list');
+    if (bookListEl) {
+      bookListEl.addEventListener('click', function (e) {
+        if (!isMobile()) { return; }
+        // openMobileDetail is handled by handleHashChange after hash updates
+      });
+    }
+
     var sessionsByDate = buildSessionsByDate(allSessions);
     var allYears = getAvailableYears(allSessions);
     var selectedAllYear = getDefaultYear(allYears);
@@ -2004,14 +2056,25 @@ $(function () {
     var byBookButton = document.getElementById('view-by-book');
     var allButton = document.getElementById('view-all');
     var highlightsButton = document.getElementById('view-highlights');
+    var wordsButton = document.getElementById('view-words');
+    var quotesButton = document.getElementById('view-quotes');
     var byBookSection = document.getElementById('by-book-section');
     var allSection = document.getElementById('all-section');
     var highlightsSection = document.getElementById('highlights-section');
 
+    var setHighlightTab = function (tab) {
+      if (highlightsSection) {
+        highlightsSection.setAttribute('data-highlight', tab);
+      }
+      if (wordsButton) { wordsButton.classList.toggle('active', tab === 'words'); }
+      if (quotesButton) { quotesButton.classList.toggle('active', tab === 'quotes'); }
+    };
+
     var setView = function (view) {
+      closeMobileDetail();
       var isByBook = view === 'book';
       var isAll = view === 'all';
-      var isHighlights = view === 'highlights';
+      var isHighlights = view === 'highlights' || view === 'words' || view === 'quotes';
       if (isAll) {
         selectedBook = null;
         updateBookList();
@@ -2021,6 +2084,13 @@ $(function () {
       } else if (isHighlights) {
         if (!isHighlightsHash()) {
           window.location.hash = 'highlights';
+        }
+        if (view === 'words' || view === 'quotes') {
+          setHighlightTab(view);
+        } else {
+          // Restore active state from current data-highlight (e.g. on page reload)
+          var currentTab = (highlightsSection && highlightsSection.getAttribute('data-highlight')) || 'words';
+          setHighlightTab(currentTab);
         }
       } else if (isAllHash() || isHighlightsHash()) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -2042,6 +2112,10 @@ $(function () {
       }
       if (highlightsButton) {
         highlightsButton.classList.toggle('active', isHighlights);
+      }
+      if (!isHighlights) {
+        if (wordsButton) { wordsButton.classList.remove('active'); }
+        if (quotesButton) { quotesButton.classList.remove('active'); }
       }
       if (typeof window.requestAnimationFrame === 'function') {
         window.requestAnimationFrame(function () {
@@ -2084,6 +2158,7 @@ $(function () {
           selectedBook = found;
           updateBookList();
           setView('book');
+          openMobileDetail();
         }
       }
     };
@@ -2103,6 +2178,18 @@ $(function () {
     if (highlightsButton) {
       highlightsButton.addEventListener('click', function () {
         setView('highlights');
+      });
+    }
+
+    if (wordsButton) {
+      wordsButton.addEventListener('click', function () {
+        setView('words');
+      });
+    }
+
+    if (quotesButton) {
+      quotesButton.addEventListener('click', function () {
+        setView('quotes');
       });
     }
 
