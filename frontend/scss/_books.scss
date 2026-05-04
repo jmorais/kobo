@@ -7,9 +7,8 @@
   padding-top: 2px;
   padding-right: 4px;
 
-  /* hide native scrollbars but keep scrolling */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   &::-webkit-scrollbar {
     width: 0;
     height: 0;
@@ -123,7 +122,6 @@
 }
 
 .book-detail {
-  // Desktop: grid that restores "meta inside header" look
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-rows: auto auto auto;
@@ -141,7 +139,6 @@
   }
 }
 
-// Flatten .book-header's children into the parent grid
 .book-header {
   display: contents;
 }

@@ -29,19 +29,16 @@
   box-sizing: border-box;
 }
 
-// xs: always full width
 .col-xs-12 {
   flex: 0 0 100%;
   max-width: 100%;
 }
 
-// sm: full width (sm is ≤768px — we treat these as always full)
 .col-sm-12 {
   flex: 0 0 100%;
   max-width: 100%;
 }
 
-// md columns kick in at ≥768px
 @media (min-width: 768px) {
   .col-md-5 {
     flex: 0 0 41.6667%;
@@ -58,7 +55,7 @@
 }
 
 .panel        { width: 100%; }
-.panel-default { /* intentionally empty — .panel-soft does the work */ }
+.panel-default {}
 
 .text-right  { text-align: right; }
 .text-muted  { color: var(--text-secondary); font-size: 11px; }

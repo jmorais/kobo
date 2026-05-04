@@ -33,7 +33,7 @@
   }
 
   #main-container {
-    padding: 0 0 56px; // no side padding — panels go edge-to-edge; tab bar space at bottom
+    padding: 0 0 56px;
   }
 
   .container {
@@ -179,7 +179,7 @@
   }
 
   .book-list {
-    gap: 0; // items separated by borders instead
+    gap: 0;
     padding-right: 0;
   }
 
@@ -220,7 +220,6 @@
     min-width: 120px;
   }
 
-  // Revert to block layout on mobile — meta sits full-width below naturally
   .book-detail {
     display: block;
   }
@@ -340,7 +339,6 @@
 }
 
 @media (max-width: 576px) {
-  // 576px inherits all 768px rules; only tweak specifics here
 
   .book-item {
     padding: 10px 14px;

@@ -104,7 +104,6 @@
   text-decoration: underline;
 }
 
-// Page header: title + theme toggle side by side
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -141,7 +140,6 @@
   }
 }
 
-// Hidden on desktop; shown on mobile via _responsive.scss
 .mobile-back {
   display: none;
 }
