@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reading Wrapped</title>
+    <link rel="stylesheet" href="../css/style.css">
+
+    <!-- Apply saved theme before first paint to avoid flash -->
+    <script>
+      (function () {
+        var t = localStorage.getItem('kobo_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      }());
+    </script>
+  </head>
+
+  <body class="wrapped-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────── -->
+    <header class="wrapped-header">
+      <h1>Reading <span>Wrapped</span></h1>
+      <p>Generate Instagram Story images for your reading year in review.</p>
+    </header>
+
+    <!-- ── Data source ─────────────────────────────────────────────────── -->
+    <div class="wrapped-card" style="display: none;">
+      <h2>Data Source</h2>
+      <div class="wrapped-data-row">
+        <span id="wrapped-data-status" class="wrapped-status">Loading data.json…</span>
+        <label class="wrapped-file-label">
+          or upload &nbsp;
+          <input type="file" id="wrapped-file" accept=".json">
+        </label>
+        <button id="wrapped-load-file" class="btn">Load file</button>
+      </div>
+    </div>
+
+    <!-- ── Controls ────────────────────────────────────────────────────── -->
+    <div class="wrapped-card">
+      <h2>Generate</h2>
+      <div class="wrapped-controls">
+        <select id="wrapped-year" class="wrapped-year-select" disabled>
+          <option value="">— select year —</option>
+        </select>
+        <button id="wrapped-generate" class="wrapped-generate-btn" disabled>
+          Generate Slides
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Progress ────────────────────────────────────────────────────── -->
+    <div class="wrapped-progress" id="wrapped-progress">
+      <progress id="wrapped-progress-bar" value="0" max="100"></progress>
+      <span id="wrapped-progress-label">Starting…</span>
+    </div>
+
+    <!-- ── Download all ────────────────────────────────────────────────── -->
+    <a id="wrapped-download-all" class="wrapped-download-all">
+      &#8681; Download all as ZIP
+    </a>
+
+    <!-- ── Preview grid ────────────────────────────────────────────────── -->
+    <div id="wrapped-preview" class="wrapped-preview"></div>
+
+    <!-- ── Scripts ─────────────────────────────────────────────────────── -->
+    <!--
+      Load jQuery (required by main.js), moment, d3, then JSZip for ZIP export,
+      and finally our two JS files. All utility functions from main.js are global
+      and reused by wrapped.js — main.js initialisation will silently skip because
+      its DOM targets (book list, punchcards, etc.) are absent on this page.
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.20.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/wrapped.js"></script>
+  </body>
+</html>

@@ -49,6 +49,7 @@
             <button id="view-all" class="view-button" type="button">All</button>
             <button id="view-highlights" class="view-button" type="button">Highlights</button>
             <button id="view-words" class="view-button mobile-only" type="button">Words</button>
+            <a id="wrapped-nav-link" href="wrapped/index.html" class="view-button" style="display:none;text-decoration:none;">Wrapped</a>
             <button id="view-quotes" class="view-button mobile-only" type="button">Quotes</button>
           </div>
         </div>
@@ -224,5 +225,10 @@
         </div>
       </div>
     </div>
+    <script>
+      if (new Date().getMonth() === 11) { // 11 = December
+        document.getElementById('wrapped-nav-link').style.display = '';
+      }
+    </script>
   </body>
 </html>
