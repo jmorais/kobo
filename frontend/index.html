@@ -5,7 +5,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Kobo Reading Stats</title>
-    <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/style.css">
 
 
@@ -13,18 +12,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.10.2/d3.min.js" charset="utf-8"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
 
-    <script src="js/bootstrap.min.js"></script>
     <script src="js/punchcard.js"></script>
     <script src="js/main.js"></script>
-
+    <script>
+      // Apply saved theme before first paint to avoid flash
+      (function () {
+        var t = localStorage.getItem('kobo_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
   </head>
 
   <body>
     <div id='main-container' class="container">
       <div class="row">
         <div class="col-xs-12">
-          <h1>Reading Stats</h1>
-          <p class="lead">All books sorted by reading time, plus per-book and overall punchcards.</p>
+          <div class="page-header">
+            <div class="header-text">
+              <h1>Reading Stats</h1>
+              <p class="lead">All books sorted by reading time, plus per-book and overall punchcards.</p>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark mode">&#9788; Light</button>
+          </div>
         </div>
       </div>
 

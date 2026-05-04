@@ -1,0 +1,88 @@
+// ── Container ──────────────────────────────────────────────────────────────
+.container {
+  width: 100%;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+// ── Row ────────────────────────────────────────────────────────────────────
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -10px;
+  margin-right: -10px;
+  margin-bottom: 16px;
+  row-gap: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// ── Columns ────────────────────────────────────────────────────────────────
+[class*="col-"] {
+  position: relative;
+  width: 100%;
+  padding-left: 10px;
+  padding-right: 10px;
+  min-height: 1px;
+  box-sizing: border-box;
+}
+
+// xs: always full width
+.col-xs-12 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+// sm: full width (sm is ≤768px — we treat these as always full)
+.col-sm-12 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+// md columns kick in at ≥768px
+@media (min-width: 768px) {
+  .col-md-5 {
+    flex: 0 0 41.6667%;
+    max-width: 41.6667%;
+  }
+  .col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  .col-md-7 {
+    flex: 0 0 58.3333%;
+    max-width: 58.3333%;
+  }
+}
+
+// ── Panel (Bootstrap compatibility shim — visuals live in _layout.scss) ───
+.panel        { width: 100%; }
+.panel-default { /* intentionally empty — .panel-soft does the work */ }
+
+// ── Utility helpers ────────────────────────────────────────────────────────
+.text-right  { text-align: right; }
+.text-muted  { color: var(--text-secondary); font-size: 11px; }
+
+.form-group {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  small {
+    display: block;
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+}

@@ -1,3 +1,33 @@
+// ── Theme toggle ──────────────────────────────────────────────────────────
+(function () {
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    var btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.innerHTML = theme === 'dark' ? '&#9788; Light' : '&#9790; Dark';
+      btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+    if (typeof window.redrawPunchcards === 'function') {
+      window.redrawPunchcards();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var saved = localStorage.getItem('kobo_theme') || 'dark';
+    applyTheme(saved);
+
+    var btn = document.getElementById('theme-toggle');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        try { localStorage.setItem('kobo_theme', next); } catch (e) {}
+      });
+    }
+  });
+})();
+
 function normalizeLibrary(raw) {
   if (!raw) {
     return { books: [], last_updated_at: null };
@@ -1024,13 +1054,14 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
   };
   var maxScore = score(maxMinutes);
   var baseColor = color || '#2563eb';
+  var emptyColor = getComputedStyle(document.documentElement).getPropertyValue('--heatmap-empty').trim() || '#ebedf0';
   var colorScale = d3.scaleQuantize()
     .domain([0, maxScore])
     .range([
-      '#ebedf0',
-      d3.interpolateRgb('#ebedf0', baseColor)(0.35),
-      d3.interpolateRgb('#ebedf0', baseColor)(0.55),
-      d3.interpolateRgb('#ebedf0', baseColor)(0.75),
+      d3.interpolateRgb(emptyColor, baseColor)(0.15),
+      d3.interpolateRgb(emptyColor, baseColor)(0.35),
+      d3.interpolateRgb(emptyColor, baseColor)(0.55),
+      d3.interpolateRgb(emptyColor, baseColor)(0.75),
       baseColor
     ]);
 
@@ -1151,7 +1182,7 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
       }
       var dateKey = formatLocalDate(d);
       var entry = totalsByDate[dateKey];
-      return entry ? colorScale(score(entry.totalMinutes)) : '#ebedf0';
+      return entry ? colorScale(score(entry.totalMinutes)) : emptyColor;
     })
     .on('mouseover', function (d) {
       var dateKey = formatLocalDate(d);
@@ -1895,6 +1926,11 @@ $(function () {
     renderAllSection();
     renderGeneralStats('general-stats', computeGeneralStats(library.books, allSessions, appSettings.minSessionMinutes));
     renderBookSection();
+
+    window.redrawPunchcards = function () {
+      renderAllSection();
+      renderBookSection();
+    };
     var highlightWordsSearch = document.getElementById('highlight-words-search');
     var highlightQuotesSearch = document.getElementById('highlight-quotes-search');
     var highlightWordsSort = document.getElementById('highlight-words-sort');

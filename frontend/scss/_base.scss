@@ -1,5 +1,54 @@
+// ── Minimal reset (replaces Bootstrap's normalize) ─────────────────────────
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  line-height: 1.15;
+}
+
 body, html {
   width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  padding: 0;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--active-blue);
+  background-color: transparent;
+}
+
+img {
+  border: 0;
+  max-width: 100%;
+  height: auto;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
 }
 
 [hidden] {
@@ -8,9 +57,10 @@ body, html {
 
 body {
   height: 100%;
-  color: #14171a;
-  font: 14px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: #f6f7fb;
+  color: var(--text-body);
+  font: 11px/1.6 "Cascadia Code", "Fira Code", "Consolas", monospace;
+  background: var(--bg);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 #main-container {
@@ -19,43 +69,79 @@ body {
 
 h1 {
   font-weight: 700;
-  font-size: 4.2rem;
-  line-height: 4.5rem;
+  font-size: 1.7rem;
+  line-height: 2.0rem;
   letter-spacing: -.02rem;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
+  color: var(--text-primary);
 }
 
 p.lead {
   font-weight: 300;
-  font-size: 1.6rem;
-  color: #6b7280;
-  margin-bottom: 30px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
 }
 
 .section-title {
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 10px;
   letter-spacing: 0.08em;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 10px 0;
 }
 
 .axis text {
-  font-size: 11px;
-  fill: #6b7280;
+  font-size: 10px;
+  fill: var(--axis-fill);
 }
 
 .axis line,
 .axis path {
-  stroke: #e5e7eb;
+  stroke: var(--axis-stroke);
 }
 
 .empty {
   padding: 18px;
-  border-radius: 12px;
-  background: #f9fafb;
-  border: 1px dashed #e5e7eb;
-  color: #9ca3af;
+  border-radius: 3px;
+  background: var(--surface-alt);
+  border: 1px dashed var(--border-subtle);
+  color: var(--text-tertiary);
   text-align: center;
+}
+
+// Bootstrap form-control dark mode override
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.5;
+  background-color: var(--surface-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:focus {
+    background-color: var(--surface);
+    color: var(--text-primary);
+    border-color: var(--active-blue);
+    border-left-width: 3px;
+    padding-left: 8px;
+    box-shadow: none;
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+}
+
+select.form-control option {
+  background: var(--surface);
+  color: var(--text-primary);
 }

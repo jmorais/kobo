@@ -9,17 +9,18 @@
   gap: 12px;
   align-items: center;
   padding: 10px 12px;
-  border: 1px solid #eef1f6;
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 
   &:hover,
   &:focus {
-    border-color: #cbd5f5;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    border-color: var(--border-hover);
+    background: var(--surface-alt);
+    box-shadow: none;
     text-decoration: none;
   }
 }
@@ -29,8 +30,8 @@
   height: 64px;
   // border-radius: 8px;
   overflow: hidden;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: var(--placeholder-bg);
+  border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,14 +53,14 @@
 
 .year-book-title {
   font-weight: 600;
-  font-size: 13px;
-  color: #111827;
+  font-size: 12px;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .year-book-meta {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: var(--text-secondary);
 }

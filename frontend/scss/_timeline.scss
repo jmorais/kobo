@@ -1,6 +1,6 @@
 .timeline-date {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 
@@ -13,19 +13,19 @@
 }
 
 .timeline-stat {
-  background: #fff;
-  border: 1px solid #eef1f6;
-  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #6b7280;
-  font-size: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
 
   strong {
-    color: #111827;
-    font-size: 16px;
+    color: var(--active-blue);
+    font-size: 14px;
     font-weight: 700;
   }
 }
@@ -63,10 +63,11 @@
   position: relative;
   max-width: 960px;
   width: 100%;
-  background: #fff;
-  border-radius: 12px;
+  background: var(--surface);
+  border-radius: 4px;
+  border: 1px solid var(--border);
   padding: 20px;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 14px 30px var(--shadow-md);
   z-index: 1;
   max-height: 90vh;
   overflow-y: auto;
@@ -76,17 +77,18 @@
 .timeline-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--backdrop);
 }
 
 .timeline-popup {
   position: relative;
   max-width: 960px;
   margin: 40px auto;
-  background: #fff;
-  border-radius: 12px;
+  background: var(--surface);
+  border-radius: 4px;
+  border: 1px solid var(--border);
   padding: 20px;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 14px 30px var(--shadow-md);
   z-index: 1;
 }
 
@@ -94,17 +96,114 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  border: none;
-  background: #f3f4f6;
-  color: #111827;
+  border: 1px solid var(--border-hover);
+  background: var(--close-btn-bg);
+  color: var(--close-btn-color);
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  font-size: 20px;
+  border-radius: 3px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .timeline-popup .panel-body {
   padding: 0;
+}
+
+// ── Settings modal ──────────────────────────────────────────────────────────
+#settings-modal .timeline-popup {
+  max-width: 480px;
+}
+
+#settings-modal .section-title {
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--active-blue);
+  letter-spacing: 0.12em;
+}
+
+#settings-modal .form-group {
+  margin-bottom: 18px;
+
+  label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  small {
+    color: var(--text-tertiary);
+    font-size: 9px;
+    margin-top: 5px;
+  }
+}
+
+// Number input: full width
+#settings-modal input[type="number"].form-control {
+  width: 100%;
+}
+
+// Checkbox row
+#settings-modal input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-hover);
+  border-radius: 2px;
+  background: var(--surface-alt);
+  cursor: pointer;
+  position: relative;
+  top: 2px;
+  margin-right: 7px;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:checked {
+    background: var(--active-blue);
+    border-color: var(--active-blue);
+
+    &::after {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 5px;
+      height: 8px;
+      border: 1.5px solid var(--bg);
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--active-blue);
+  }
+}
+
+#settings-modal label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: flex-start;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-body);
+}
+
+#settings-modal .text-right {
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

@@ -18,21 +18,35 @@
   .year-books {
     grid-template-columns: 1fr;
   }
+
+  .general-stats {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
   #main-container {
-    padding: 24px 0;
+    padding: 20px 0;
   }
 
   h1 {
-    font-size: 2.6rem;
-    line-height: 2.9rem;
+    font-size: 1.4rem;
+    line-height: 1.7rem;
   }
 
   p.lead {
-    font-size: 1.3rem;
-    margin-bottom: 20px;
+    font-size: 0.8rem;
+    margin-bottom: 14px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .theme-toggle {
+    align-self: flex-start;
+    margin-top: 0;
   }
 
   .view-toggle {
@@ -66,7 +80,7 @@
   }
 
   .book-detail h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .book-stats {
@@ -102,16 +116,28 @@
     top: 10px;
     right: 10px;
   }
+
+  .podium-main {
+    gap: 10px;
+  }
+
+  .podium-item {
+    width: 110px;
+  }
 }
 
 @media (max-width: 576px) {
   #main-container {
-    padding: 18px 0;
+    padding: 16px 0;
   }
 
   h1 {
-    font-size: 2.2rem;
-    line-height: 2.5rem;
+    font-size: 1.2rem;
+    line-height: 1.5rem;
+  }
+
+  p.lead {
+    font-size: 0.75rem;
   }
 
   .book-item {
@@ -125,15 +151,16 @@
   }
 
   .book-title {
-    font-size: 14px;
-  }
-
-  .book-stats {
     font-size: 12px;
   }
 
+  .book-stats {
+    font-size: 11px;
+  }
+
   .general-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .year-button {
@@ -158,5 +185,23 @@
 
   .punchcard-controls .form-control {
     width: 100%;
+  }
+
+  .book-header-meta {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .podium-item {
+    width: 90px;
+  }
+
+  .podium-cover {
+    width: 70px;
+    height: 100px;
+  }
+
+  .rank-1 .podium-cover {
+    width: 85px;
+    height: 120px;
   }
 }

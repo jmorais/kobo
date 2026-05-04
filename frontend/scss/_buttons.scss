@@ -1,0 +1,58 @@
+// ── Base button ────────────────────────────────────────────────────────────
+.btn {
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--surface-alt);
+    border-color: var(--border-hover);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--active-blue);
+  }
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+// Primary — accent fill
+.btn-primary {
+  background: var(--active-blue);
+  color: #fff;
+  border-color: var(--active-blue);
+
+  &:hover {
+    background: var(--active-blue-dark);
+    border-color: var(--active-blue-dark);
+    color: #fff;
+  }
+}
+
+// Default — surface button
+.btn-default {
+  background: var(--surface-alt);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+
+  &:hover {
+    background: var(--placeholder-bg);
+    border-color: var(--border-hover);
+  }
+}

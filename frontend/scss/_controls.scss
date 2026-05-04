@@ -5,18 +5,20 @@
   margin-bottom: 12px;
 
   label {
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin: 0;
   }
 
   .form-control {
     width: auto;
     min-width: 140px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    border: 1px solid var(--border-subtle);
     box-shadow: none;
+    background: var(--surface);
+    color: var(--text-primary);
   }
 }

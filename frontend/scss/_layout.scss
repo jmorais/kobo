@@ -1,25 +1,29 @@
 .panel-soft {
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: none;
   overflow: hidden;
 
   > .panel-heading {
-    padding: 16px;
-    background: #fff;
-    border-bottom: 1px solid #eef1f6;
-    min-height: 56px;
+    padding: 10px 16px;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+    min-height: 44px;
     display: flex;
     align-items: center;
   }
 
   .panel-title {
     font-weight: 600;
-    color: #111827;
+    color: var(--text-secondary);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   .panel-body {
-    background: #fff;
+    background: var(--surface);
+    padding: 16px;
   }
 }
 
@@ -40,32 +44,36 @@
   .panel-body {
     flex: 1;
     overflow: auto;
+    padding: 16px;
   }
 }
 
 .view-toggle {
   display: inline-flex;
-  gap: 8px;
-  padding: 4px;
-  background: #f3f4f6;
-  border-radius: 999px;
+  gap: 4px;
+  padding: 3px;
+  background: var(--toggle-bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
   margin-bottom: 20px;
 }
 
 .view-button {
   border: none;
   background: transparent;
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 3px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6b7280;
+  color: var(--text-secondary);
   cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &.active {
-    background: #2563eb;
+    background: var(--active-blue);
     color: #fff;
   }
 }
@@ -77,8 +85,8 @@
 
 .last-updated,
 .settings-link {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: var(--text-secondary);
   opacity: 0.9;
   text-decoration: none;
   display: inline-block;
@@ -88,10 +96,47 @@
 .last-updated-sep {
   display: inline-block;
   margin: 0 10px;
-  color: #6b7280;
+  color: var(--text-secondary);
   opacity: 0.6;
 }
 
 .settings-link:hover {
   text-decoration: underline;
+}
+
+// Page header: title + theme toggle side by side
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.theme-toggle {
+  flex-shrink: 0;
+  background: var(--toggle-bg);
+  border: 1px solid var(--border-hover);
+  color: var(--active-blue);
+  border-radius: 3px;
+  padding: 5px 14px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: flex-start;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  &:hover {
+    background: var(--active-blue);
+    color: #fff;
+  }
 }

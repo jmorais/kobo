@@ -1,1 +1,85 @@
-$primary: #b70003;
+$primary: #a0c4ff;
+
+// ── Light theme (default) ──────────────────────────────────────────────────
+:root {
+  --bg:                 #eef2f8;
+  --surface:            #ffffff;
+  --surface-alt:        #f0f4fa;
+  --border:             #c0d0e0;
+  --border-subtle:      #c8d8e8;
+  --border-hover:       #3a6aaf;
+  --text-primary:       #0d1825;
+  --text-body:          #1a2e48;
+  --text-secondary:     #507090;
+  --text-tertiary:      #7090a8;
+  --text-muted:         #405060;
+  --text-base:          #304050;
+  --placeholder-bg:     #dce8f4;
+  --toggle-bg:          #dce8f4;
+  --active-bg:          #d0e4f8;
+  --active-blue:        #1e3a5f;
+  --active-blue-dark:   #2a4f80;
+  --shadow-sm:          rgba(0, 20, 60, 0.06);
+  --shadow-md:          rgba(0, 20, 60, 0.10);
+  --shadow-hover:       rgba(30, 58, 95, 0.10);
+  --donut-fill:         #1e3a5f;
+  --donut-track:        #c8d8e8;
+  --donut-inner:        #ffffff;
+  --stroke-cell:        #ffffff;
+  --stroke-active:      #0d1825;
+  --heatmap-empty:      #ebedf0;
+  --backdrop:           rgba(0, 20, 60, 0.6);
+  --close-btn-bg:       #dce8f4;
+  --close-btn-color:    #0d1825;
+  --axis-fill:          #507090;
+  --axis-stroke:        #c8d8e8;
+  --year-button-color:  #304050;
+  --status-unread-bg:       #dce8f4;
+  --status-unread-color:    #507090;
+  --status-reading-bg:      #ccdff8;
+  --status-reading-color:   #1e3a5f;
+  --status-finished-bg:     #c8e8d8;
+  --status-finished-color:  #1a5038;
+}
+
+// ── Dark theme (editor aesthetic) ─────────────────────────────────────────
+[data-theme="dark"] {
+  --bg:                 #0d0d1a;
+  --surface:            #1a1a2e;
+  --surface-alt:        #141e2e;
+  --border:             #1a2535;
+  --border-subtle:      #2a3040;
+  --border-hover:       #3a6aaf;
+  --text-primary:       #e0e0e0;
+  --text-body:          #c8d8e8;
+  --text-secondary:     #7090b0;
+  --text-tertiary:      #506070;
+  --text-muted:         #90b8e0;
+  --text-base:          #b0c0d0;
+  --placeholder-bg:     #0d1825;
+  --toggle-bg:          #1e3a5f;
+  --active-bg:          #1a2e48;
+  --active-blue:        #a0c4ff;
+  --active-blue-dark:   #80b0ff;
+  --shadow-sm:          rgba(0, 0, 0, 0);
+  --shadow-md:          rgba(0, 0, 0, 0);
+  --shadow-hover:       rgba(0, 0, 0, 0);
+  --donut-fill:         #a0c4ff;
+  --donut-track:        #1e3a5f;
+  --donut-inner:        #1a1a2e;
+  --stroke-cell:        #0d0d1a;
+  --stroke-active:      #a0c4ff;
+  --heatmap-empty:      #1e2d42;
+  --backdrop:           rgba(0, 0, 0, 0.8);
+  --close-btn-bg:       #1e3a5f;
+  --close-btn-color:    #a0c4ff;
+  --axis-fill:          #506070;
+  --axis-stroke:        #1a2535;
+  --year-button-color:  #90b8e0;
+  --status-unread-bg:       #1a2535;
+  --status-unread-color:    #7090b0;
+  --status-reading-bg:      #1a2e48;
+  --status-reading-color:   #a0c4ff;
+  --status-finished-bg:     #1a2e20;
+  --status-finished-color:  #80e0a0;
+}

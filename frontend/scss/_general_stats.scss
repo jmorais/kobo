@@ -5,25 +5,25 @@
 }
 
 .general-stat {
-  background: #fff;
-  border: 1px solid #eef1f6;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #6b7280;
-  font-size: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
 
   strong {
-    color: #111827;
-    font-size: 16px;
+    color: var(--active-blue);
+    font-size: 14px;
     font-weight: 700;
   }
 
   .general-stat-sub {
-    color: #4b5563;
-    font-size: 12px;
+    color: var(--text-muted);
+    font-size: 11px;
     font-style: normal;
   }
 }
