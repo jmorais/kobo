@@ -1,4 +1,3 @@
-// ── Container ──────────────────────────────────────────────────────────────
 .container {
   width: 100%;
   max-width: 1140px;
@@ -8,7 +7,6 @@
   padding-right: 20px;
 }
 
-// ── Row ────────────────────────────────────────────────────────────────────
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -22,7 +20,6 @@
   }
 }
 
-// ── Columns ────────────────────────────────────────────────────────────────
 [class*="col-"] {
   position: relative;
   width: 100%;
@@ -60,11 +57,9 @@
   }
 }
 
-// ── Panel (Bootstrap compatibility shim — visuals live in _layout.scss) ───
 .panel        { width: 100%; }
 .panel-default { /* intentionally empty — .panel-soft does the work */ }
 
-// ── Utility helpers ────────────────────────────────────────────────────────
 .text-right  { text-align: right; }
 .text-muted  { color: var(--text-secondary); font-size: 11px; }
 

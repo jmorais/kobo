@@ -1,6 +1,5 @@
 $primary: #a0c4ff;
 
-// ── Light theme (default) ──────────────────────────────────────────────────
 :root {
   --bg:                 #eef2f8;
   --surface:            #ffffff;
@@ -42,7 +41,6 @@ $primary: #a0c4ff;
   --status-finished-color:  #1a5038;
 }
 
-// ── Dark theme (editor aesthetic) ─────────────────────────────────────────
 [data-theme="dark"] {
   --bg:                 #0d0d1a;
   --surface:            #1a1a2e;

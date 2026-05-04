@@ -26,14 +26,11 @@
 }
 
 @media (max-width: 768px) {
-  // ── Hide scrollbar, keep scroll ───────────────────────────────────────────
   body {
     -ms-overflow-style: none;
     scrollbar-width: none;
     &::-webkit-scrollbar { display: none; }
   }
-
-  // ── Layout chrome ─────────────────────────────────────────────────────────
 
   #main-container {
     padding: 0 0 56px; // no side padding — panels go edge-to-edge; tab bar space at bottom
@@ -55,8 +52,6 @@
     padding-left: 0;
     padding-right: 0;
   }
-
-  // ── Page header ───────────────────────────────────────────────────────────
 
   p.lead {
     display: none;
@@ -84,8 +79,6 @@
     margin-top: 0;
     flex-shrink: 0;
   }
-
-  // ── Tab bar ───────────────────────────────────────────────────────────────
 
   .view-toggle {
     position: fixed;
@@ -127,8 +120,6 @@
   #highlights-section[data-highlight="words"] #highlights-quotes-col { display: none; }
   #highlights-section[data-highlight="quotes"] #highlights-words-col { display: none; }
 
-  // ── Panels: remove border-radius, go edge-to-edge ─────────────────────────
-
   .panel-soft {
     border-radius: 0;
     border-left: none;
@@ -140,8 +131,6 @@
   .row + .row .panel-soft {
     border-top: 1px solid var(--border);
   }
-
-  // ── By-book: two virtual screens ──────────────────────────────────────────
 
   #by-book-section {
     display: block;
@@ -166,8 +155,6 @@
     display: block;
   }
 
-  // ── Back button ───────────────────────────────────────────────────────────
-
   .mobile-back {
     display: inline-flex;
     align-items: center;
@@ -190,8 +177,6 @@
     align-items: center;
     gap: 0;
   }
-
-  // ── Book list ─────────────────────────────────────────────────────────────
 
   .book-list {
     gap: 0; // items separated by borders instead
@@ -234,8 +219,6 @@
     flex: 0 0 auto;
     min-width: 120px;
   }
-
-  // ── Book detail ───────────────────────────────────────────────────────────
 
   // Revert to block layout on mobile — meta sits full-width below naturally
   .book-detail {
@@ -311,8 +294,6 @@
     }
   }
 
-  // ── All section ───────────────────────────────────────────────────────────
-
   .general-stats {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
@@ -322,13 +303,9 @@
     grid-template-columns: 1fr;
   }
 
-  // ── Highlights ────────────────────────────────────────────────────────────
-
   .highlight-controls {
     padding-bottom: 10px;
   }
-
-  // ── Misc ──────────────────────────────────────────────────────────────────
 
   .row-equal > [class*='col-'] {
     display: block;
