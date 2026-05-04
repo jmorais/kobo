@@ -467,8 +467,13 @@ function computeGeneralStats(books, sessions, minMinutes) {
 
     var today = new Date();
     var todayKey = formatLocalDate(today);
-    if (readingDays.indexOf(todayKey) !== -1) {
-      var streakDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var streakStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (readingDays.indexOf(todayKey) === -1) {
+      streakStart.setDate(streakStart.getDate() - 1);
+    }
+    var startKey = formatLocalDate(streakStart);
+    if (readingDays.indexOf(startKey) !== -1) {
+      var streakDate = streakStart;
       while (true) {
         var key = formatLocalDate(streakDate);
         if (readingDays.indexOf(key) === -1) {
@@ -1879,11 +1884,16 @@ $(function () {
     // ── Mobile navigation ────────────────────────────────────────────────────
     var isMobile = function () { return window.matchMedia('(max-width: 768px)').matches; };
 
+    var navTitleEl = document.getElementById('mobile-nav-title');
+    var setNavTitle = function (title) {
+      if (navTitleEl) { navTitleEl.textContent = title; }
+    };
+
     var openMobileDetail = function () {
       if (isMobile()) {
         document.body.classList.add('mobile-detail-open');
         window.scrollTo(0, 0);
-        // Re-render book punchcard now that its container is visible
+        setNavTitle(selectedBook ? (selectedBook.title || 'Book') : 'Book');
         setTimeout(function () {
           if (typeof window.redrawPunchcards === 'function') {
             window.redrawPunchcards();
@@ -1895,7 +1905,13 @@ $(function () {
     var closeMobileDetail = function () {
       document.body.classList.remove('mobile-detail-open');
       window.scrollTo(0, 0);
+      setNavTitle('Books');
     };
+
+    var mobileNavBack = document.getElementById('mobile-nav-back');
+    if (mobileNavBack) {
+      mobileNavBack.addEventListener('click', closeMobileDetail);
+    }
 
     var mobileBackBtn = document.getElementById('mobile-back');
     if (mobileBackBtn) {
@@ -2086,6 +2102,7 @@ $(function () {
       var isAll = view === 'all';
       var isHighlights = view === 'highlights' || view === 'words' || view === 'quotes';
       if (isAll) {
+        setNavTitle('All Sessions');
         selectedBook = null;
         updateBookList();
         if (!isAllHash()) {
@@ -2097,13 +2114,17 @@ $(function () {
         }
         if (view === 'words' || view === 'quotes') {
           setHighlightTab(view);
+          setNavTitle(view === 'words' ? 'Words' : 'Quotes');
         } else {
-          // Restore active state from current data-highlight (e.g. on page reload)
           var currentTab = (highlightsSection && highlightsSection.getAttribute('data-highlight')) || 'words';
           setHighlightTab(currentTab);
+          setNavTitle(currentTab === 'quotes' ? 'Quotes' : 'Words');
         }
-      } else if (isAllHash() || isHighlightsHash()) {
-        history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else {
+        setNavTitle('Books');
+        if (isAllHash() || isHighlightsHash()) {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
       }
       if (byBookSection) {
         byBookSection.hidden = !isByBook;

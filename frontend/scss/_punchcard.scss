@@ -22,9 +22,9 @@
   }
 
   &.active {
-    background: var(--active-blue);
-    color: #fff;
-    border-color: var(--active-blue);
+    background: var(--year-button-active-bg);
+    color: var(--year-button-active-color);
+    border-color: var(--year-button-active-bg);
   }
 }
 

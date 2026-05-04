@@ -33,7 +33,7 @@
   }
 
   #main-container {
-    padding: 0 0 56px;
+    padding: 52px 0 84px;
   }
 
   .container {
@@ -63,16 +63,58 @@
   }
 
   .page-header {
-    flex-direction: row;
+    display: none;
+  }
+
+  .mobile-nav-bar {
+    display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 12px 16px;
-    border-bottom: none;
-    background: var(--surface);
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    height: 52px;
+    padding: 0 8px;
+  }
+
+  .mobile-nav-back {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--active-blue);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    visibility: hidden;
+  }
+
+  body.mobile-detail-open .mobile-nav-back {
+    visibility: visible;
+  }
+
+  .mobile-nav-title {
+    flex: 1;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-nav-spacer {
+    width: 40px;
+    flex-shrink: 0;
   }
 
   .theme-toggle {
@@ -90,7 +132,7 @@
     flex-direction: row;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    padding: 0;
+    padding: 0 0 env(safe-area-inset-bottom, 0);
     border-radius: 0;
     margin: 0;
     gap: 0;
@@ -101,11 +143,14 @@
     border-radius: 0;
     border: none;
     border-top: 2px solid transparent;
-    padding: 10px 4px 8px;
-    font-size: 10px;
+    padding: 16px 4px 14px;
+    font-size: 9px;
     text-align: center;
     background: transparent;
     color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
 
     &.active {
       border-top-color: var(--active-blue);
@@ -156,19 +201,7 @@
   }
 
   .mobile-back {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: none;
-    border: none;
-    color: var(--active-blue);
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0;
-    margin-right: 8px;
-    flex-shrink: 0;
+    display: none !important;
   }
 
   .book-detail-heading.panel-heading,
