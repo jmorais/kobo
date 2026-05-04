@@ -1257,6 +1257,141 @@ function renderYearPunchcard(targetId, sessions, year, color, selectedDateKey, s
 
 }
 
+function renderMobileTimeline(container, sessions, bookMeta, books) {
+  var HOUR_HEIGHT = 120;  // 1 minute = 2px, so min-height distortion is at most 1 minute
+  var MIN_BLOCK = 26;     // 5px padding + 12px*1.3 line-height + 5px padding ≈ 26px for one text line
+  var SCHEME10 = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];
+
+  function bookColor(title) {
+    var idx = books.indexOf(title);
+    return SCHEME10[Math.max(0, idx) % SCHEME10.length];
+  }
+  function fmtTime(date) {
+    var h = date.getHours(), m = date.getMinutes();
+    return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  }
+
+  var minHour = 0, maxHour = 24;
+  if (sessions.length) {
+    var firstMin = sessions.reduce(function (m, s) {
+      return Math.min(m, s.start.getHours() * 60 + s.start.getMinutes());
+    }, Infinity);
+    var lastMin = sessions.reduce(function (m, s) {
+      return Math.max(m, s.end.getHours() * 60 + s.end.getMinutes());
+    }, 0);
+    minHour = Math.max(0, Math.floor((firstMin - 30) / 30) * 30 / 60);
+    maxHour = Math.min(24, Math.ceil((lastMin + 30) / 30) * 30 / 60);
+  }
+
+  // Find gaps > 2 hours between consecutive sessions and compress them
+  var GAP_THRESHOLD_MIN = 120;
+  var GAP_DISPLAY_PX = 112; // px for compressed gap: room for 2 anchor hours + divider
+  var sortedByTime = sessions.slice().sort(function (a, b) {
+    return (a.start.getHours() * 60 + a.start.getMinutes()) - (b.start.getHours() * 60 + b.start.getMinutes());
+  });
+  var gapBreaks = [];
+  for (var bi = 0; bi < sortedByTime.length - 1; bi++) {
+    var sessionEndMin   = sortedByTime[bi].end.getHours() * 60 + sortedByTime[bi].end.getMinutes();
+    var sessionStartMin = sortedByTime[bi + 1].start.getHours() * 60 + sortedByTime[bi + 1].start.getMinutes();
+    // Gap boundaries snap to hour lines: next whole hour after end, prev whole hour before start
+    var gapStartMin = Math.ceil(sessionEndMin / 60) * 60;
+    var gapEndMin   = Math.floor(sessionStartMin / 60) * 60;
+    if (gapEndMin - gapStartMin > GAP_THRESHOLD_MIN) {
+      var naturalPx = (gapEndMin - gapStartMin) / 60 * HOUR_HEIGHT;
+      gapBreaks.push({
+        startMin: gapStartMin,  // the hour line that closes the first segment
+        endMin: gapEndMin,      // the hour line that opens the second segment
+        savings: naturalPx - GAP_DISPLAY_PX,
+        anchorAfter:  gapStartMin / 60,   // whole hour = first line shown in gap
+        anchorBefore: gapEndMin / 60      // whole hour = last line shown in gap
+      });
+    }
+  }
+  var totalSavings = gapBreaks.reduce(function (s, b) { return s + b.savings; }, 0);
+
+  function timeToY(timeMin) {
+    var y = (timeMin / 60 - minHour) * HOUR_HEIGHT;
+    for (var k = 0; k < gapBreaks.length; k++) {
+      if (timeMin >= gapBreaks[k].endMin) {
+        y -= gapBreaks[k].savings;
+      } else if (timeMin > gapBreaks[k].startMin) {
+        var frac = (timeMin - gapBreaks[k].startMin) / (gapBreaks[k].endMin - gapBreaks[k].startMin);
+        y -= frac * gapBreaks[k].savings;
+      }
+    }
+    return Math.round(y);
+  }
+
+  function renderHourLine(h, top) {
+    var hlabel = (h < 10 ? '0' + h : h) + ':00';
+    return '<div class="mdt-hour" style="top:' + top + 'px">' +
+      '<span class="mdt-hour-label">' + hlabel + '</span>' +
+      '<div class="mdt-hour-line"></div>' +
+    '</div>';
+  }
+
+  var totalHeight = (maxHour - minHour) * HOUR_HEIGHT - totalSavings;
+  var html = '<div class="mdt-inner" style="height:' + totalHeight + 'px">';
+
+  // Hour labels — skip any hour that falls inside a gap (anchor hours rendered with the gap)
+  for (var h = Math.ceil(minHour); h <= Math.floor(maxHour); h++) {
+    var hMin = h * 60;
+    var inGap = gapBreaks.some(function (b) { return hMin >= b.startMin && hMin <= b.endMin; });
+    if (inGap) { continue; }
+    html += renderHourLine(h, timeToY(hMin));
+  }
+
+  // Break dividers — render with two anchor hours at fixed spacing inside the gap
+  gapBreaks.forEach(function (b) {
+    var gapY = timeToY(b.startMin);
+    // anchorAfter at 8px from top of gap, anchorBefore at 8px from bottom
+    // Equal thirds: after at 1/4, hourglass at 1/2, before at 3/4
+    var afterY  = gapY + 16;
+    var midY    = gapY + Math.round((GAP_DISPLAY_PX - 32) / 2); // center the 32px-tall gap div
+    var beforeY = gapY + GAP_DISPLAY_PX - 16;
+    if (b.anchorAfter * 60 >= b.startMin)  { html += renderHourLine(b.anchorAfter, afterY); }
+    html += '<div class="mdt-gap" style="top:' + midY + 'px"><span class="mdt-gap-line"></span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mdt-gap-icon" viewBox="0 0 16 16"><path d="M2.5 15a.5.5 0 1 1 0-1h1v-1a4.5 4.5 0 0 1 2.557-4.06c.29-.139.443-.377.443-.59v-.7c0-.213-.154-.451-.443-.59A4.5 4.5 0 0 1 3.5 3V2h-1a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-1v1a4.5 4.5 0 0 1-2.557 4.06c-.29.139-.443.377-.443.59v.7c0 .213.154.451.443.59A4.5 4.5 0 0 1 12.5 13v1h1a.5.5 0 0 1 0 1zm2-13v1c0 .537.12 1.045.337 1.5h6.326c.216-.455.337-.963.337-1.5V2zm3 6.35c0 .701-.478 1.236-1.011 1.492A3.5 3.5 0 0 0 4.5 13s.866-1.299 3-1.48zm1 0v3.17c2.134.181 3 1.48 3 1.48a3.5 3.5 0 0 0-1.989-3.158C8.978 9.586 8.5 9.052 8.5 8.351z"/></svg><span class="mdt-gap-line"></span></div>';
+    if (b.anchorBefore * 60 <= b.endMin)   { html += renderHourLine(b.anchorBefore, beforeY); }
+  });
+
+  // Compute pixel positions for each session using compressed y
+  var layouts = sessions.map(function (s) {
+    var sh = s.start.getHours() + s.start.getMinutes() / 60;
+    var eh = s.end.getHours() + s.end.getMinutes() / 60;
+    var naturalHeight = Math.max(MIN_BLOCK, Math.round((eh - sh) * HOUR_HEIGHT));
+    var itemTop = timeToY(s.start.getHours() * 60 + s.start.getMinutes());
+    return { s: s, top: itemTop, blockHeight: naturalHeight, renderTop: itemTop };
+  });
+
+  // Sort by start time
+  layouts.sort(function (a, b) { return a.top - b.top; });
+
+  // Push sessions down so rendered blocks never visually overlap
+  var renderedEnd = 0;
+  layouts.forEach(function (item) {
+    item.renderTop = Math.max(item.top, renderedEnd);
+    renderedEnd = item.renderTop + item.blockHeight + 2;
+  });
+
+  // Render sessions
+  html += '<div class="mdt-track">';
+  layouts.forEach(function (item) {
+    var s = item.s;
+    var color = bookColor(s.bookTitle);
+    var minutes = Math.max(0, (s.end - s.start) / 60000);
+    var timeStr = fmtTime(s.start) + '\u2013' + fmtTime(s.end);
+    html += '<div class="mdt-session" style="top:' + item.renderTop + 'px;height:' + item.blockHeight + 'px;' +
+      'border-left-color:' + color + ';background-color:' + color + '1a">' +
+      '<div class="mdt-session-title">' + s.bookTitle + '</div>' +
+      (item.blockHeight >= 46 ? '<div class="mdt-session-time">' + timeStr + ' &middot; ' + formatDurationLabel(minutes) + '</div>' : '') +
+    '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>';
+  container.innerHTML = '<div class="mdt">' + html + '</div>';
+}
+
 function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
   var container = document.getElementById(targetId);
   var label = document.getElementById(labelId);
@@ -1387,6 +1522,12 @@ function renderTimeline(targetId, labelId, dateKey, sessionsByDate, options) {
         '<div class="timeline-stat"><span>Total sessions</span><strong>' + sessionCount + '</strong></div>' +
         '<div class="timeline-stat"><span>Total time read</span><strong>' + totalTimeLabel + '</strong></div>' +
       '</div>';
+  }
+
+  // Mobile: vertical timeline instead of SVG
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    renderMobileTimeline(container, sessions, bookMeta, books);
+    return;
   }
 
   // Increase cover size by 25%

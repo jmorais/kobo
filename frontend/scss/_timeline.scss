@@ -204,3 +204,95 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+.mdt {
+  padding: 8px 0px;
+}
+
+.mdt-inner {
+  position: relative;
+}
+
+.mdt-hour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mdt-hour-label {
+  width: 44px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+  padding-right: 8px;
+  margin-top: -7px;
+}
+
+.mdt-hour-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.mdt-track {
+  position: absolute;
+  left: 52px;
+  right: 8px;
+  top: 0;
+  bottom: 0;
+}
+
+.mdt-session {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-left: 3px solid;
+  border-radius: 3px;
+  padding: 4px 6px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mdt-gap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  margin: 0 -15px;
+
+  .mdt-gap-line {
+    flex: 1;
+    border-top: 1.5px dashed var(--text-tertiary);
+    opacity: 0.5;
+  }
+
+  .mdt-gap-icon {
+    flex-shrink: 0;
+  }
+}
+
+.mdt-session-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.mdt-session-time {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
