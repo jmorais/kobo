@@ -11,23 +11,65 @@
   var W = 1080;
   var H = 1920;
 
-  // ── Theme colours ────────────────────────────────────────────────────────
-  var CLR = {
-    bg1:     '#0d0d1a',
-    bg2:     '#160d2e',
-    accent1: '#a78bfa',
-    accent2: '#60a5fa',
-    white:   '#ffffff',
-    muted:   '#9ca3af',
-    dim:     '#6b7280',
-    surface: '#1a1a2e',
-    divider: '#1e2535',
-    gold:    '#fbbf24',
-    silver:  '#9ca3af',
-    bronze:  '#cd7f32'
-  };
+  // ── Theme infrastructure ─────────────────────────────────────────────────
+  // CLR / RANK_COLOURS / FONT are populated by setActiveTheme. Slide-drawing
+  // functions capture references at IIFE-eval time, so themes must MUTATE
+  // these in place — never re-bind.
+  var CLR          = {};
+  var RANK_COLOURS = [];
+  var FONT         = {};
+  var activeTheme  = null;
 
-  var RANK_COLOURS = [CLR.gold, CLR.silver, CLR.bronze, CLR.accent1, CLR.accent2];
+  function defaultFonts() {
+    return {
+      heading: 'Inter, -apple-system, Arial, sans-serif',
+      body:    'Inter, -apple-system, Arial, sans-serif',
+      display: 'Inter, -apple-system, Arial, sans-serif',
+      mono:    'ui-monospace, SFMono-Regular, Menlo, monospace'
+    };
+  }
+
+  function setActiveTheme(theme) {
+    activeTheme = theme;
+    Object.keys(CLR).forEach(function (k) { delete CLR[k]; });
+    Object.assign(CLR, theme.colors);
+    RANK_COLOURS.length = 0;
+    (theme.rankColors || []).forEach(function (c) { RANK_COLOURS.push(c); });
+    Object.keys(FONT).forEach(function (k) { delete FONT[k]; });
+    Object.assign(FONT, defaultFonts(), theme.fonts || {});
+  }
+
+  function loadTheme(themeId) {
+    return new Promise(function (resolve, reject) {
+      window.WrappedThemes = window.WrappedThemes || {};
+      if (window.WrappedThemes[themeId]) {
+        setActiveTheme(window.WrappedThemes[themeId]);
+        resolve();
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = '../js/themes/' + themeId + '.js';
+      s.onload = function () {
+        var t = window.WrappedThemes[themeId];
+        if (!t) {
+          reject(new Error('Theme "' + themeId + '" did not register'));
+          return;
+        }
+        setActiveTheme(t);
+        resolve();
+      };
+      s.onerror = function () {
+        reject(new Error('Failed to load theme "' + themeId + '"'));
+      };
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadThemeCSS(themeId) {
+    var link = document.getElementById('wrapped-theme-css');
+    if (!link) { return; }
+    link.href = '../css/themes/' + themeId + '.css';
+  }
 
   // ── Canvas helpers ───────────────────────────────────────────────────────
 
@@ -39,66 +81,13 @@
   }
 
   function drawBg(ctx, seed) {
-    // Mulberry32-inspired PRNG seeded per slide
-    var s = ((seed | 0) + 1) * 1664525 + 1013904223;
-    function rand() {
-      s = Math.imul(s ^ (s >>> 15), s | 1) >>> 0;
-      s = (s ^ (s + Math.imul(s ^ (s >>> 7), s | 61) >>> 0)) >>> 0;
-      s = (s ^ (s >>> 14)) >>> 0;
-      return s / 4294967296;
+    if (activeTheme && typeof activeTheme.drawBackground === 'function') {
+      activeTheme.drawBackground(ctx, W, H, seed);
+      return;
     }
-
-    // Curated dark base pairs
-    var BASES = [
-      ['#0d0d1a', '#160d2e'], // navy/purple
-      ['#080d18', '#0c1428'], // deep blue
-      ['#0a180c', '#0c1e12'], // deep forest
-      ['#180c0c', '#260c16'], // deep crimson
-      ['#0c1818', '#0a1e1e'], // deep teal
-      ['#161608', '#1c1c0c'], // deep olive
-      ['#160c18', '#1c0c24'], // deep violet
-      ['#100c1a', '#160c22'], // near-black indigo
-    ];
-
-    // Curated glow accent colours
-    var GLOWS = [
-      '#a78bfa', '#60a5fa', '#34d399', '#f472b6',
-      '#fb923c', '#facc15', '#22d3ee', '#c084fc',
-      '#f87171', '#a3e635', '#818cf8', '#2dd4bf',
-    ];
-
-    var base = BASES[Math.floor(rand() * BASES.length)];
-
-    // Diagonal gradient in a random direction
-    var flip0 = rand() > 0.5;
-    var flip1 = rand() > 0.5;
-    var x0 = flip0 ? W : 0;
-    var y0 = flip1 ? H : 0;
-    var x1 = flip0 ? 0 : W;
-    var y1 = flip1 ? 0 : H;
-    var g  = ctx.createLinearGradient(x0, y0, x1, y1);
-    g.addColorStop(0,    base[0]);
-    g.addColorStop(0.55, base[1]);
-    g.addColorStop(1,    base[0]);
-    ctx.fillStyle = g;
+    // No theme loaded — paint a flat surface so something renders.
+    ctx.fillStyle = CLR.bg1 || '#000000';
     ctx.fillRect(0, 0, W, H);
-
-    // 3 procedural radial glows
-    ctx.save();
-    for (var i = 0; i < 3; i++) {
-      var gx    = rand() * W;
-      var gy    = rand() * H;
-      var gr    = 380 + rand() * 640;
-      var alpha = 0.07 + rand() * 0.13;
-      var col   = GLOWS[Math.floor(rand() * GLOWS.length)];
-      ctx.globalAlpha = alpha;
-      var rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
-      rg.addColorStop(0, col);
-      rg.addColorStop(1, 'transparent');
-      ctx.fillStyle = rg;
-      ctx.fillRect(0, 0, W, H);
-    }
-    ctx.restore();
   }
 
   function accentGrad(ctx, x1, x2, y) {
@@ -147,7 +136,7 @@
 
   function drawSectionHeader(ctx, label, y) {
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'left';
     ctx.fillText(label, 80, y);
@@ -161,7 +150,7 @@
 
   function drawGradientText(ctx, text, x, y, fontSize, textAlign) {
     ctx.save();
-    ctx.font      = 'bold ' + fontSize + 'px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = 'bold ' + fontSize + 'px ' + FONT.display;
     ctx.textAlign = textAlign || 'left';
     var measured  = ctx.measureText(text).width;
     var startX    = (textAlign === 'center') ? (x - measured / 2) : x;
@@ -215,6 +204,71 @@
       ctx.fillText('\uD83D\uDCDA', x + cw / 2, y + ch / 2 + 22);
     }
     ctx.restore();
+  }
+
+  // ── Theme override hooks ─────────────────────────────────────────────────
+
+  // Bag of canvas utilities + live theme references passed to every theme
+  // override (drawCard, slides[*]). Built fresh per call so themes always see
+  // the current CLR/FONT/RANK_COLOURS (mutated in place by setActiveTheme).
+  function makeHelpers() {
+    return {
+      drawBg:             drawBg,
+      drawCover:          drawCover,
+      fitText:            fitText,
+      roundRect:          roundRect,
+      accentGrad:         accentGrad,
+      drawAccentBar:      drawAccentBar,
+      drawSectionHeader:  drawSectionHeader,
+      drawGradientText:   drawGradientText,
+      drawDivider:        drawDivider,
+      drawBranding:       drawBranding,
+      makeCanvas:         makeCanvas,
+      drawCard:           drawCard,
+      loadImage:          loadImage,
+      CLR:                CLR,
+      FONT:               FONT,
+      RANK_COLOURS:       RANK_COLOURS,
+      W:                  W,
+      H:                  H
+    };
+  }
+
+  // Card drawing — themes can override `drawCard` to change every card's
+  // surface treatment without redefining whole slide layouts.
+  // opts: { radius, fill, label, noFill }
+  function drawCard(ctx, x, y, w, h, opts) {
+    opts = opts || {};
+    if (activeTheme && typeof activeTheme.drawCard === 'function') {
+      activeTheme.drawCard(ctx, x, y, w, h, opts, makeHelpers());
+      return;
+    }
+    if (opts.noFill) { return; }
+    var radius = opts.radius != null ? opts.radius : 16;
+    ctx.save();
+    roundRect(ctx, x, y, w, h, radius);
+    ctx.fillStyle = opts.fill || 'rgba(255,255,255,0.055)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Per-slide override router. If activeTheme.slides[name] is a function,
+  // call it with the same args as the default slide function PLUS a final
+  // helpers bag. Otherwise call the default.
+  function callSlide(name, defaultFn) {
+    var args = Array.prototype.slice.call(arguments, 2);
+    if (activeTheme && activeTheme.slides && typeof activeTheme.slides[name] === 'function') {
+      try {
+        return activeTheme.slides[name].apply(null, args.concat([makeHelpers()]));
+      } catch (e) {
+        // If a theme slide override blows up, log and fall back to default
+        // so the user still sees a usable slide deck.
+        if (window.console && console.error) {
+          console.error('Theme slide override "' + name + '" failed:', e);
+        }
+      }
+    }
+    return defaultFn.apply(null, args);
   }
 
   // ── Stats helpers ────────────────────────────────────────────────────────
@@ -323,6 +377,53 @@
     };
   }
 
+  // ── Dictionary API — part-of-speech categorisation ───────────────────────
+
+  var DICT_CACHE_PREFIX = 'kobo_dict_v1_';
+
+  // Fetch the primary part of speech for a single word.
+  // Result is cached in localStorage so subsequent runs are instant.
+  function fetchWordPOS(word) {
+    var key    = DICT_CACHE_PREFIX + word.toLowerCase();
+    var cached = localStorage.getItem(key);
+    if (cached !== null) { return Promise.resolve(cached); }
+    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' +
+      encodeURIComponent(word.toLowerCase());
+    return fetch(url)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        var pos = 'other';
+        if (Array.isArray(data) && data[0] && Array.isArray(data[0].meanings) &&
+            data[0].meanings[0]) {
+          var p = (data[0].meanings[0].partOfSpeech || '').toLowerCase();
+          if      (p === 'noun')      { pos = 'noun'; }
+          else if (p === 'verb')      { pos = 'verb'; }
+          else if (p === 'adjective') { pos = 'adjective'; }
+        }
+        try { localStorage.setItem(key, pos); } catch (e) {}
+        return pos;
+      })
+      .catch(function () { return 'other'; });
+  }
+
+  // Look up POS for a list of unique words, 8 concurrent requests at a time.
+  function fetchWordCategories(uniqueWords) {
+    if (!uniqueWords.length) { return Promise.resolve({}); }
+    var BATCH = 8, result = {}, batches = [];
+    for (var i = 0; i < uniqueWords.length; i += BATCH) {
+      batches.push(uniqueWords.slice(i, i + BATCH));
+    }
+    return batches.reduce(function (chain, batch) {
+      return chain.then(function () {
+        return Promise.all(batch.map(function (word) {
+          return fetchWordPOS(word).then(function (pos) {
+            result[word.toLowerCase()] = pos;
+          });
+        }));
+      });
+    }, Promise.resolve()).then(function () { return result; });
+  }
+
   // ── Slide 1 — Intro ──────────────────────────────────────────────────────
 
   function slideIntro(year) {
@@ -383,7 +484,7 @@
     var PILL_Y   = 200;
     var PILL_H   = 64;
     ctx.save();
-    ctx.font = 'bold 40px Inter, Arial, sans-serif';
+    ctx.font = 'bold 40px ' + FONT.heading;
     var pillTW = ctx.measureText(yearStr).width;
     var pillW  = pillTW + 56;
     ctx.restore();
@@ -399,7 +500,7 @@
     ctx.restore();
 
     ctx.save();
-    ctx.font      = 'bold 40px Inter, Arial, sans-serif';
+    ctx.font      = 'bold 40px ' + FONT.heading;
     ctx.fillStyle = CLR.accent1;
     ctx.textAlign = 'center';
     ctx.fillText(yearStr, PILL_CX, PILL_Y + 14);
@@ -407,7 +508,7 @@
 
     // ── "YOUR" ───────────────────────────────────────────────────────────
     ctx.save();
-    ctx.font      = 'bold 130px Inter, Arial, sans-serif';
+    ctx.font      = 'bold 130px ' + FONT.display;
     ctx.fillStyle = CLR.white;
     ctx.textAlign = 'left';
     ctx.globalAlpha = 0.92;
@@ -419,7 +520,7 @@
 
     // ── "WRAPPED" — massive, white ───────────────────────────────────────
     ctx.save();
-    ctx.font      = 'bold 172px Inter, Arial, sans-serif';
+    ctx.font      = 'bold 172px ' + FONT.display;
     ctx.fillStyle = CLR.white;
     ctx.textAlign = 'left';
     ctx.fillText('WRAPPED', 60, 1000);
@@ -437,7 +538,7 @@
 
     // ── Tagline ──────────────────────────────────────────────────────────
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'left';
     ctx.fillText('Here\u2019s your year in books.', 60, 1140);
@@ -449,91 +550,78 @@
 
   // ── Slide 2 — Overview ───────────────────────────────────────────────────
 
-  function slideOverview(stats, year, booksFinished) {
+  function slideOverview(stats, year, booksFinished, hlStats) {
     var c   = makeCanvas();
     var ctx = c.getContext('2d');
     drawBg(ctx, 1);
 
-    // ── Hero label ───────────────────────────────────────────────────────
-    ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
-    ctx.fillStyle = CLR.muted;
-    ctx.textAlign = 'center';
-    ctx.fillText(String(year) + ' in numbers', W / 2, 200);
-    ctx.restore();
+    drawSectionHeader(ctx, year + ' \u00b7 In Numbers', 155);
 
-    // ── Hero stat — total reading time ───────────────────────────────────
+    drawCard(ctx, 80, 212, W - 160, 260);
+
+    // ── Hero: total reading time ─────────────────────────────────────────
     var heroVal = formatDurationLabel(stats.totalMinutes);
-    drawGradientText(ctx, heroVal, W / 2, 480, 172, 'center');
+    ctx.save();
+    ctx.font = 'bold 120px ' + FONT.display;
+    var hm  = ctx.measureText(heroVal).width;
+    var hfs = hm > W - 160 ? Math.floor(120 * (W - 160) / hm) : 120;
+    ctx.restore();
+    drawGradientText(ctx, heroVal, 80, 355, hfs);
 
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '40px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
-    ctx.textAlign = 'center';
-    ctx.fillText('read this year', W / 2, 560);
+    ctx.textAlign = 'left';
+    ctx.fillText('read this year', 80, 418);
     ctx.restore();
 
-    // ── 2×2 card grid ────────────────────────────────────────────────────
-    // Card layout: padding 52px on each side, 32px gutter
-    var pad   = 52;
-    var gutter = 32;
-    var cw    = Math.floor((W - pad * 2 - gutter) / 2);
-    var ch    = 340;
-    var col0  = pad;
-    var col1  = pad + cw + gutter;
-    var row0  = 680;
-    var row1  = row0 + ch + gutter;
-
-    var cards = [
-      { value: String(stats.sessionCount),        label: 'Sessions',       icon: '\uD83D\uDCD6' },
-      { value: String(booksFinished),             label: 'Books finished', icon: '\u2705' },
-      { value: stats.preferredPeriod,             label: 'Fav. period',    icon: '\uD83C\uDF19' },
-      { value: String(stats.longestStreak) + 'd', label: 'Best streak',    icon: '\uD83D\uDD25' }
+    // ── Stat rows ────────────────────────────────────────────────────────
+    var rows = [
+      { label: 'Sessions',       value: String(stats.sessionCount) },
+      { label: 'Books finished', value: String(booksFinished || 0) },
+      { label: 'Best streak',    value: String(stats.longestStreak || 0) + ' days' },
+      { label: 'Words saved',    value: String(hlStats && hlStats.wordCount  != null ? hlStats.wordCount  : 0) },
+      { label: 'Quotes saved',   value: String(hlStats && hlStats.quoteCount != null ? hlStats.quoteCount : 0) }
     ];
 
-    var positions = [
-      { x: col0, y: row0 },
-      { x: col1, y: row0 },
-      { x: col0, y: row1 },
-      { x: col1, y: row1 }
-    ];
+    var startY = 480;
+    var rowH   = 268;
 
-    cards.forEach(function (card, i) {
-      var px = positions[i].x;
-      var py = positions[i].y;
+    rows.forEach(function (row, i) {
+      var y = startY + i * rowH;
 
-      // Card surface
       ctx.save();
-      roundRect(ctx, px, py, cw, ch, 24);
-      ctx.fillStyle = 'rgba(255,255,255,0.055)';
-      ctx.fill();
+      ctx.strokeStyle = CLR.divider;
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(80, y);
+      ctx.lineTo(W - 80, y);
+      ctx.stroke();
       ctx.restore();
 
-      // Icon
       ctx.save();
-      ctx.font      = '68px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(card.icon, px + 30, py + 88);
-      ctx.restore();
-
-      // Value
-      ctx.save();
-      ctx.font      = 'bold 88px Inter, -apple-system, Arial, sans-serif';
-      ctx.textAlign = 'left';
-      var measured  = ctx.measureText(card.value).width;
-      var maxW      = cw - 60;
-      var fontSize  = measured > maxW ? Math.floor(88 * maxW / measured) : 88;
-      ctx.restore();
-      drawGradientText(ctx, card.value, px + 30, py + 218, fontSize);
-
-      // Label
-      ctx.save();
-      ctx.font      = '38px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '32px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'left';
-      ctx.fillText(card.label, px + 30, py + 294);
+      ctx.fillText(row.label, 80, y + 44);
       ctx.restore();
+
+      ctx.save();
+      ctx.font = 'bold 96px ' + FONT.display;
+      var mw = ctx.measureText(row.value).width;
+      var fs = mw > W - 160 ? Math.floor(96 * (W - 160) / mw) : 96;
+      ctx.restore();
+      drawGradientText(ctx, row.value, 80, y + 214, fs);
     });
+
+    ctx.save();
+    ctx.strokeStyle = CLR.divider;
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, startY + rows.length * rowH);
+    ctx.lineTo(W - 80, startY + rows.length * rowH);
+    ctx.stroke();
+    ctx.restore();
 
     drawBranding(ctx);
     return c;
@@ -548,7 +636,7 @@
 
     // ── Header ───────────────────────────────────────────────────────────
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'left';
     ctx.fillText(String(year) + '  \u00b7  Top Books', 80, 160);
@@ -580,7 +668,7 @@
 
     // "#1" rank badge on top-left corner of cover
     ctx.save();
-    ctx.font      = 'bold 52px Inter, Arial, sans-serif';
+    ctx.font      = 'bold 52px ' + FONT.heading;
     ctx.fillStyle = CLR.gold;
     ctx.textAlign = 'left';
     ctx.fillText('1', heroX + 12, heroY + 56);
@@ -591,7 +679,7 @@
     var htw = W - htx - 60;
 
     ctx.save();
-    ctx.font      = 'bold 62px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = 'bold 62px ' + FONT.heading;
     ctx.fillStyle = CLR.white;
     ctx.textAlign = 'left';
     // Two-line title: try to split naturally
@@ -612,7 +700,7 @@
 
     if (hero.author) {
       ctx.save();
-      ctx.font      = '44px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '44px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'left';
       ctx.fillText(fitText(ctx, hero.author, htw), htx, heroY + (line2 ? 230 : 160));
@@ -635,7 +723,7 @@
 
       // Rank numeral
       ctx.save();
-      ctx.font      = 'bold 52px Inter, Arial, sans-serif';
+      ctx.font      = 'bold 52px ' + FONT.heading;
       ctx.fillStyle = col;
       ctx.textAlign = 'right';
       ctx.globalAlpha = 0.85;
@@ -650,7 +738,7 @@
       var stw = W - stx - 60;
 
       ctx.save();
-      ctx.font      = 'bold 52px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = 'bold 52px ' + FONT.heading;
       ctx.fillStyle = CLR.white;
       ctx.textAlign = 'left';
       ctx.fillText(fitText(ctx, book.title || 'Untitled', stw), stx, ry + 60);
@@ -658,7 +746,7 @@
 
       if (book.author) {
         ctx.save();
-        ctx.font      = '38px Inter, -apple-system, Arial, sans-serif';
+        ctx.font      = '38px ' + FONT.body;
         ctx.fillStyle = CLR.muted;
         ctx.textAlign = 'left';
         ctx.fillText(fitText(ctx, book.author, stw), stx, ry + 110);
@@ -682,7 +770,7 @@
 
       // Faint label
       ctx.save();
-      ctx.font      = '34px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '34px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText('also read this year', 80, cloudStart + 44);
@@ -729,21 +817,21 @@
       ctx.restore();
 
       ctx.save();
-      ctx.font      = 'bold 44px Inter, Arial, sans-serif';
+      ctx.font      = 'bold 44px ' + FONT.heading;
       ctx.fillStyle = RANK_COLOURS[i] || CLR.dim;
       ctx.textAlign = 'center';
       ctx.fillText(String(i + 1), 80, ry + 62);
       ctx.restore();
 
       ctx.save();
-      ctx.font      = 'bold 46px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = 'bold 46px ' + FONT.heading;
       ctx.fillStyle = CLR.white;
       ctx.textAlign = 'left';
       ctx.fillText(fitText(ctx, a.author, W - 220), 148, ry + 42);
       ctx.restore();
 
       ctx.save();
-      ctx.font      = '34px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '34px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'left';
       ctx.fillText(
@@ -790,7 +878,7 @@
       ctx.restore();
 
       ctx.save();
-      ctx.font      = '42px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '42px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText(h.label, 80, y + 88);
@@ -800,7 +888,7 @@
 
       if (h.sub) {
         ctx.save();
-        ctx.font      = '38px Inter, -apple-system, Arial, sans-serif';
+        ctx.font      = '38px ' + FONT.body;
         ctx.fillStyle = CLR.muted;
         ctx.textAlign = 'left';
         ctx.fillText(fitText(ctx, h.sub, W - 160), 80, y + 270);
@@ -825,7 +913,7 @@
 
     // ── Hero: longest streak ─────────────────────────────────────────────
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'center';
     ctx.fillText('Longest streak', W / 2, 370);
@@ -834,7 +922,7 @@
     drawGradientText(ctx, String(stats.longestStreak), W / 2, 640, 240, 'center');
 
     ctx.save();
-    ctx.font      = 'bold 64px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = 'bold 64px ' + FONT.heading;
     ctx.fillStyle = CLR.white;
     ctx.textAlign = 'center';
     ctx.fillText('days in a row', W / 2, 730);
@@ -858,7 +946,7 @@
       ctx.restore();
 
       ctx.save();
-      ctx.font      = 'bold 40px Inter, Arial, sans-serif';
+      ctx.font      = 'bold 40px ' + FONT.heading;
       ctx.fillStyle = col;
       ctx.textAlign = 'center';
       ctx.fillText(String(i + 1), 80, ry + 58);
@@ -875,7 +963,7 @@
         return months[parseInt(parts[1], 10) - 1] + ' ' + parseInt(parts[2], 10);
       };
       ctx.save();
-      ctx.font      = '36px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '36px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'left';
       ctx.fillText(fmt(streak.start) + ' \u2013 ' + fmt(streak.end), 148, ry + 116);
@@ -891,7 +979,7 @@
     bCols.forEach(function (col) {
       drawGradientText(ctx, col.value, col.x, metY, 72, 'center');
       ctx.save();
-      ctx.font      = '40px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '40px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'center';
       ctx.fillText(col.label, col.x, metY + 58);
@@ -913,7 +1001,7 @@
 
     // ── Words ──
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'left';
     ctx.fillText('New words saved', 80, 390);
@@ -926,20 +1014,20 @@
 
     if (hlStats.longestWord) {
       ctx.save();
-      ctx.font      = '40px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '40px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText('Longest word', 80, lwY + 52);
       ctx.restore();
 
       ctx.save();
-      ctx.font = 'bold 72px Inter, -apple-system, Arial, sans-serif';
+      ctx.font = 'bold 72px ' + FONT.heading;
       var lwFitted = fitText(ctx, hlStats.longestWord, W - 160);
       ctx.restore();
       drawGradientText(ctx, lwFitted, 80, lwY + 160, 72);
 
       ctx.save();
-      ctx.font      = '36px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '36px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText(hlStats.longestWord.length + ' characters', 80, lwY + 220);
@@ -948,20 +1036,20 @@
 
     if (hlStats.shortestWord) {
       ctx.save();
-      ctx.font      = '40px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '40px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText('Shortest word', 80, swY + 52);
       ctx.restore();
 
       ctx.save();
-      ctx.font = 'bold 72px Inter, -apple-system, Arial, sans-serif';
+      ctx.font = 'bold 72px ' + FONT.heading;
       var swFitted = fitText(ctx, hlStats.shortestWord, W - 160);
       ctx.restore();
       drawGradientText(ctx, swFitted, 80, swY + 160, 72);
 
       ctx.save();
-      ctx.font      = '36px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '36px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText(hlStats.shortestWord.length + ' characters', 80, swY + 220);
@@ -974,7 +1062,7 @@
     var qY = swY + 360;
 
     ctx.save();
-    ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = '52px ' + FONT.body;
     ctx.fillStyle = CLR.muted;
     ctx.textAlign = 'left';
     ctx.fillText('Quotes saved', 80, qY);
@@ -1010,7 +1098,7 @@
       var y = startY + i * gap;
 
       ctx.save();
-      ctx.font      = '48px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '48px ' + FONT.body;
       ctx.fillStyle = CLR.dim;
       ctx.textAlign = 'left';
       ctx.fillText(item.label, 80, y);
@@ -1036,7 +1124,7 @@
 
     if (!quotes.length) {
       ctx.save();
-      ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '52px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'center';
       ctx.fillText('No quotes saved this year', W / 2, H / 2);
@@ -1092,14 +1180,9 @@
       return false;
     }
 
-    // Truncate long quotes to a reasonable snippet
+    // Break a snippet into wrapped lines given a max pixel width
     function snippet(text) {
-      var t = text.trim().replace(/\s+/g, ' ');
-      if (t.length <= 100) { return t; }
-      // Cut at word boundary
-      var cut = t.slice(0, 100);
-      var last = cut.lastIndexOf(' ');
-      return (last > 50 ? cut.slice(0, last) : cut) + '\u2026';
+      return text.trim().replace(/\s+/g, ' ');
     }
 
     // Break a snippet into wrapped lines given a max pixel width
@@ -1190,7 +1273,7 @@
 
     // Label — centred, semi-transparent, on top of everything
     ctx.save();
-    ctx.font      = 'bold 44px Inter, -apple-system, Arial, sans-serif';
+    ctx.font      = 'bold 44px ' + FONT.heading;
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.textAlign = 'center';
     ctx.fillText(String(year) + '  \u00b7  your quotes', W / 2, H - 80);
@@ -1209,11 +1292,20 @@
 
     drawSectionHeader(ctx, year + ' \u00b7 New Words', 210);
 
+    if (hlStats.wordCount != null) {
+      ctx.save();
+      ctx.font      = '44px ' + FONT.body;
+      ctx.fillStyle = CLR.muted;
+      ctx.textAlign = 'left';
+      ctx.fillText(hlStats.wordCount + ' words saved', 80, 340);
+      ctx.restore();
+    }
+
     var allWords = hlStats.words || [];
 
     if (!allWords.length) {
       ctx.save();
-      ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '52px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'center';
       ctx.fillText('No words saved this year', W / 2, H / 2);
@@ -1239,7 +1331,7 @@
     var words   = wordList.slice(0, 120);
     var maxCnt  = words[0].count;
     var minCnt  = words[words.length - 1].count;
-    var CLOUD_TOP = 270;
+    var CLOUD_TOP = 420;
     var CX = W / 2;
     var CY = CLOUD_TOP + (H - CLOUD_TOP - 60) / 2;
 
@@ -1260,7 +1352,7 @@
 
     function tryPlace(word, count) {
       var fs   = fontSize(count);
-      ctx.font = 'bold ' + fs + 'px Inter, -apple-system, Arial, sans-serif';
+      ctx.font = 'bold ' + fs + 'px ' + FONT.heading;
       var tw   = ctx.measureText(word).width;
       var th   = fs * 1.2;
       var PAD  = 10;
@@ -1286,7 +1378,7 @@
       if (!pos) { return; }
       var col = CLOUD_PALETTE[i % CLOUD_PALETTE.length];
       ctx.save();
-      ctx.font        = 'bold ' + pos.fs + 'px Inter, -apple-system, Arial, sans-serif';
+      ctx.font        = 'bold ' + pos.fs + 'px ' + FONT.heading;
       ctx.fillStyle   = col;
       ctx.globalAlpha = 0.50 + 0.50 * ((item.count - minCnt) / (maxCnt - minCnt + 1));
       ctx.textAlign   = 'left';
@@ -1301,54 +1393,54 @@
   // ── Genre fetching (Open Library) ─────────────────────────────────────────
 
   function fetchGenresForYear(allBooksForYear, bookMap) {
-    var booksWithIsbn = allBooksForYear.map(function (entry) {
+    var books = allBooksForYear.map(function (entry) {
       var b = bookMap[entry.bookId];
-      return { bookId: entry.bookId, minutes: entry.minutes, isbn: b ? (b.isbn13 || null) : null };
-    }).filter(function (item) { return item.isbn; });
+      var title  = (b && b.title)  || entry.title  || '';
+      var author = (b && b.author) || '';
+      return { bookId: entry.bookId, title: title, author: author };
+    }).filter(function (item) { return item.title; });
 
-    if (!booksWithIsbn.length) { return Promise.resolve({}); }
+    if (!books.length) { return Promise.resolve({}); }
 
-    var BATCH = 20;
-    var batches = [];
-    for (var i = 0; i < booksWithIsbn.length; i += BATCH) {
-      batches.push(booksWithIsbn.slice(i, i + BATCH));
-    }
+    var genreMap = {}; // bookId -> subjects[]
 
-    var genreMap = {}; // isbn -> subjects[]
+    var CONCURRENCY = 5;
 
-    var fetchBatch = function (batch) {
-      var bibkeys = batch.map(function (item) { return 'ISBN:' + item.isbn; }).join(',');
-      var url = 'https://openlibrary.org/api/books?bibkeys=' +
-        encodeURIComponent(bibkeys) + '&format=json&jscmd=data';
+    var fetchOne = function (item) {
+      var q = item.title + (item.author ? ' ' + item.author : '');
+      var url = 'https://openlibrary.org/search.json?q=' + encodeURIComponent(q) + '&limit=1&fields=subject';
       return fetch(url)
-        .then(function (r) { return r.ok ? r.json() : {}; })
+        .then(function (r) { return r.ok ? r.json() : { docs: [] }; })
         .then(function (data) {
-          batch.forEach(function (item) {
-            var bookData = data['ISBN:' + item.isbn];
-            if (bookData && Array.isArray(bookData.subjects)) {
-              genreMap[item.isbn] = bookData.subjects
-                .map(function (s) { return typeof s === 'string' ? s : (s.name || ''); })
-                .filter(Boolean);
-            }
-          });
+          var doc = data.docs && data.docs[0];
+          if (doc && Array.isArray(doc.subject)) {
+            genreMap[item.bookId] = doc.subject.filter(Boolean);
+          }
         })
         .catch(function () {});
     };
 
-    return batches.reduce(function (chain, batch) {
-      return chain.then(function () { return fetchBatch(batch); });
-    }, Promise.resolve()).then(function () { return genreMap; });
+    // Run with limited concurrency
+    var idx = 0;
+    function runNext() {
+      if (idx >= books.length) { return Promise.resolve(); }
+      var item = books[idx++];
+      return fetchOne(item).then(runNext);
+    }
+    var workers = [];
+    for (var w = 0; w < Math.min(CONCURRENCY, books.length); w++) {
+      workers.push(runNext());
+    }
+    return Promise.all(workers).then(function () { return genreMap; });
   }
 
   function computeGenreStats(allBooksForYear, bookMap, genreMap) {
     var counts = {};
     allBooksForYear.forEach(function (entry) {
-      var b = bookMap[entry.bookId];
-      if (!b || !b.isbn13) { return; }
-      var subjects = genreMap[b.isbn13] || [];
+      var subjects = genreMap[entry.bookId] || [];
       subjects.forEach(function (subject) {
         var key = subject.trim();
-        if (!key) { return; }
+        if (!key || key.indexOf(':') !== -1 || key.indexOf('/') !== -1) { return; }
         var norm = key.toLowerCase();
         if (!counts[norm]) { counts[norm] = { subject: key, count: 0, minutes: 0 }; }
         counts[norm].count++;
@@ -1370,7 +1462,7 @@
 
     if (!genreStats.length) {
       ctx.save();
-      ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '52px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'center';
       ctx.fillText('No ISBN data available', W / 2, H / 2);
@@ -1408,7 +1500,7 @@
 
       // Genre label
       ctx.save();
-      ctx.font      = '44px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '44px ' + FONT.body;
       ctx.fillStyle = CLR.white;
       ctx.textAlign = 'left';
       ctx.fillText(fitText(ctx, genre.subject, BAR_MAX_W - 120), BAR_LEFT, ry + 48);
@@ -1416,7 +1508,7 @@
 
       // Count badge
       ctx.save();
-      ctx.font      = 'bold 40px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = 'bold 40px ' + FONT.heading;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'right';
       ctx.fillText(String(genre.count) + (genre.count === 1 ? ' book' : ' books'),
@@ -1439,7 +1531,7 @@
 
     if (!genreStats.length) {
       ctx.save();
-      ctx.font      = '52px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = '52px ' + FONT.body;
       ctx.fillStyle = CLR.muted;
       ctx.textAlign = 'center';
       ctx.fillText('No ISBN data available', W / 2, H / 2);
@@ -1480,7 +1572,7 @@
 
     function tryPlace(word, count) {
       var fs     = fontSize(count);
-      ctx.font   = 'bold ' + fs + 'px Inter, -apple-system, Arial, sans-serif';
+      ctx.font   = 'bold ' + fs + 'px ' + FONT.heading;
       var tw     = ctx.measureText(word).width;
       var th     = fs * 1.2;
       var PAD    = 12;
@@ -1511,7 +1603,7 @@
       if (!pos) { return; }
       var col = CLOUD_PALETTE[i % CLOUD_PALETTE.length];
       ctx.save();
-      ctx.font      = 'bold ' + pos.fs + 'px Inter, -apple-system, Arial, sans-serif';
+      ctx.font      = 'bold ' + pos.fs + 'px ' + FONT.heading;
       ctx.fillStyle = col;
       ctx.globalAlpha = 0.55 + 0.45 * ((genre.count - minCnt) / (maxCnt - minCnt + 1));
       ctx.textAlign = 'left';
@@ -1525,7 +1617,14 @@
 
   // ── Orchestrator ─────────────────────────────────────────────────────────
 
-  function generateWrapped(books, year, onProgress) {
+  function generateWrapped(books, year, themeId, onProgress) {
+    onProgress('Loading theme…', 5);
+    return loadTheme(themeId).then(function () {
+      loadThemeCSS(themeId);
+      // Wait for any @import'd webfonts to be ready so canvas text doesn't
+      // render with system fallbacks during the brief font-fetch window.
+      return (document.fonts && document.fonts.ready) || Promise.resolve();
+    }).then(function () {
     var bookMap     = {};
     books.forEach(function (b) { bookMap[b.id] = b; });
 
@@ -1562,28 +1661,68 @@
     var coverBase = '../covers/';
 
     return loadCovers(allBooksForYear, coverBase).then(function (coverMap) {
-      onProgress('Fetching genres\u2026', 50);
-      return fetchGenresForYear(allBooksForYear, bookMap).then(function (genreMap) {
+      onProgress('Fetching data\u2026', 40);
+      var seenW = {}, uniqueWords = [];
+      (hlStats.words || []).forEach(function (w) {
+        var k = w.toLowerCase();
+        if (!seenW[k]) { seenW[k] = true; uniqueWords.push(w); }
+      });
+      return Promise.all([
+        fetchGenresForYear(allBooksForYear, bookMap),
+        fetchWordCategories(uniqueWords)
+      ]).then(function (results) {
+        var genreMap = results[0];
+        var posMap   = results[1];
+
+        var nouns = [], verbs = [], adjectives = [], others = [];
+        uniqueWords.forEach(function (w) {
+          var pos = posMap[w.toLowerCase()] || 'other';
+          if      (pos === 'noun')      { nouns.push(w); }
+          else if (pos === 'verb')      { verbs.push(w); }
+          else if (pos === 'adjective') { adjectives.push(w); }
+          else                          { others.push(w); }
+        });
+        function longestOf(arr) {
+          if (!arr.length) { return null; }
+          return arr.reduce(function (a, b) { return b.length > a.length ? b : a; });
+        }
+        function shortestOf(arr) {
+          if (!arr.length) { return null; }
+          return arr.reduce(function (a, b) { return b.length < a.length ? b : a; });
+        }
+        hlStats.nouns         = nouns;
+        hlStats.verbs         = verbs;
+        hlStats.adjectives    = adjectives;
+        hlStats.others        = others;
+        hlStats.longestNoun   = longestOf(nouns);
+        hlStats.shortestNoun  = shortestOf(nouns);
+        hlStats.longestVerb   = longestOf(verbs);
+        hlStats.shortestVerb  = shortestOf(verbs);
+        hlStats.longestAdj    = longestOf(adjectives);
+        hlStats.shortestAdj   = shortestOf(adjectives);
+        hlStats.longestOther  = longestOf(others);
+        hlStats.shortestOther = shortestOf(others);
+
         var genreStats = computeGenreStats(allBooksForYear, bookMap, genreMap);
-        onProgress('Rendering slides\u2026', 70);
+        onProgress('Rendering slides\u2026', 75);
 
         var slides = [
-          { name: '01-intro.png',       canvas: slideIntro(year) },
-          { name: '02-overview.png',    canvas: slideOverview(stats, year, booksFinished) },
-          { name: '03-top-books.png',   canvas: slideTopBooks(top5Books, allBooksForYear, coverMap, year) },
-          { name: '04-top-authors.png', canvas: slideTopAuthors(topAuthors, year) },
-          { name: '05-habits.png',      canvas: slideHabits(stats, year) },
-          { name: '06-streaks.png',     canvas: slideStreaks(stats, topStreaks, year) },
-          { name: '07-vocabulary.png',  canvas: slideVocabulary(hlStats, year) },
-          { name: '08-quotes.png',      canvas: slideQuotes(hlStats, year) },
-          { name: '09-words-cloud.png', canvas: slideWordsCloud(hlStats, year) },
-          { name: '10-genres.png',      canvas: slideGenres(genreStats, year) },
-          { name: '11-wordcloud.png',   canvas: slideWordCloud(genreStats, year) }
+          { name: '01-intro.png',       canvas: callSlide('slideIntro',      slideIntro,      year) },
+          { name: '02-overview.png',    canvas: callSlide('slideOverview',   slideOverview,   stats, year, booksFinished, hlStats) },
+          { name: '03-top-books.png',   canvas: callSlide('slideTopBooks',   slideTopBooks,   top5Books, allBooksForYear, coverMap, year) },
+          { name: '04-top-authors.png', canvas: callSlide('slideTopAuthors', slideTopAuthors, topAuthors, year) },
+          { name: '05-habits.png',      canvas: callSlide('slideHabits',     slideHabits,     stats, year) },
+          { name: '06-streaks.png',     canvas: callSlide('slideStreaks',    slideStreaks,    stats, topStreaks, year) },
+          { name: '07-quotes.png',      canvas: callSlide('slideQuotes',     slideQuotes,     hlStats, year) },
+          { name: '09-words-cloud.png', canvas: callSlide('slideWordsCloud', slideWordsCloud, hlStats, year) },
+          { name: '10-genres.png',      canvas: callSlide('slideGenres',     slideGenres,     genreStats, year) },
+          { name: '11-wordcloud.png',   canvas: callSlide('slideWordCloud',  slideWordCloud,  genreStats, year) }
         ];
 
         onProgress('Done', 100);
         return slides;
       });
+    });
     });
   }
 
@@ -1592,6 +1731,7 @@
   document.addEventListener('DOMContentLoaded', function () {
 
     var yearSelect      = document.getElementById('wrapped-year');
+    var themeSelect     = document.getElementById('wrapped-theme');
     var generateBtn     = document.getElementById('wrapped-generate');
     var progressWrap    = document.getElementById('wrapped-progress');
     var progressEl      = document.getElementById('wrapped-progress-bar');
@@ -1603,6 +1743,41 @@
     var dataStatus      = document.getElementById('wrapped-data-status');
 
     if (!yearSelect) { return; } // not on the wrapped page
+
+    // ── Theme selector wiring ──────────────────────────────────────────────
+    if (themeSelect) {
+      var savedThemeId = localStorage.getItem('kobo_wrapped_theme') || 'neobrutalism';
+      // Restore selection if the option exists, else fall back to first option.
+      var hasOption = false;
+      for (var i = 0; i < themeSelect.options.length; i++) {
+        if (themeSelect.options[i].value === savedThemeId) { hasOption = true; break; }
+      }
+      if (!hasOption) { savedThemeId = themeSelect.options[0] ? themeSelect.options[0].value : 'neobrutalism'; }
+      themeSelect.value = savedThemeId;
+
+      // Pre-load the saved theme so CLR/FONT are populated before any
+      // generation kicks off. default.js is included as a static <script> in
+      // wrapped/index.html, so for 'default' this resolves synchronously.
+      loadTheme(savedThemeId).catch(function () { /* fall through; user can re-pick */ });
+      loadThemeCSS(savedThemeId);
+
+      themeSelect.addEventListener('change', function () {
+        var id = themeSelect.value;
+        localStorage.setItem('kobo_wrapped_theme', id);
+        loadTheme(id).catch(function (e) {
+          alert('Theme failed to load: ' + e.message);
+          var fallback = themeSelect.options[0] ? themeSelect.options[0].value : 'neobrutalism';
+          themeSelect.value = fallback;
+          loadTheme(fallback);
+          loadThemeCSS(fallback);
+        });
+        loadThemeCSS(id);
+        // No auto-regenerate; user re-clicks Generate.
+      });
+    } else {
+      // Page has no selector — keep the default theme so anything still works.
+      loadTheme('neobrutalism').catch(function () { /* nothing else to do */ });
+    }
 
     var currentLibrary = null;
 
@@ -1683,7 +1858,8 @@
 
       setProgress('Starting\u2026', 0);
 
-      generateWrapped(currentLibrary.books, year, setProgress)
+      var themeId = themeSelect ? themeSelect.value : 'default';
+      generateWrapped(currentLibrary.books, year, themeId, setProgress)
         .then(function (slides) {
           slides.forEach(function (slide) {
             var dataUrl = slide.canvas.toDataURL('image/png');
