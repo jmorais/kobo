@@ -1440,7 +1440,7 @@
       var subjects = genreMap[entry.bookId] || [];
       subjects.forEach(function (subject) {
         var key = subject.trim();
-        if (!key || key.indexOf(':') !== -1 || key.indexOf('/') !== -1) { return; }
+        if (!key || key.indexOf(':') !== -1 || key.indexOf('/') !== -1 || key.indexOf(',') !== -1 || key.length > 40) { return; }
         var norm = key.toLowerCase();
         if (!counts[norm]) { counts[norm] = { subject: key, count: 0, minutes: 0 }; }
         counts[norm].count++;
