@@ -995,6 +995,101 @@
     return c;
   }
 
+  function slideMosaic(allBooksForYear, coverMap, year, h) {
+    var c   = h.makeCanvas();
+    var ctx = c.getContext('2d');
+    h.drawBg(ctx, 10);
+    var W = h.W, H = h.H, FONT = h.FONT;
+
+    hardCard(ctx, 80, 60, W - 160, 140, '#000000');
+    ctx.save();
+    ctx.font = 'bold 72px ' + FONT.heading;
+    ctx.fillStyle = '#facc15';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BOOKS MOSAIC ' + year, W / 2, 130);
+    ctx.restore();
+
+    var books = allBooksForYear.slice().sort(function (a, b) { return b.minutes - a.minutes; });
+    if (!books.length) {
+      ctx.save();
+      ctx.font = 'bold 56px ' + FONT.heading;
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.fillText('NO BOOKS THIS YEAR', W / 2, H / 2);
+      ctx.restore();
+      return c;
+    }
+
+    var COVER_AR    = 2 / 3;
+    var MAX_H       = 320;
+    var MIN_H       = 40;
+    var GAP         = 6;
+    var MOSAIC_TOP  = 240;
+    var MOSAIC_LEFT = 40;
+    var MOSAIC_W    = W - MOSAIC_LEFT * 2;
+    var MOSAIC_H    = H - MOSAIC_TOP - 40;
+    var maxMin      = books[0].minutes;
+
+    var items = books.map(function (b) {
+      var img = b.imageId ? coverMap[b.imageId] : null;
+      var ar  = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : COVER_AR;
+      var t   = Math.sqrt(b.minutes / maxMin);
+      var nh  = MIN_H + t * (MAX_H - MIN_H);
+      return { book: b, nh: nh, nw: nh * ar, ar: ar };
+    });
+
+    // Greedy row packing
+    var rows = [], cur = [], curW = 0;
+    items.forEach(function (item) {
+      var projected = curW + (cur.length ? GAP : 0) + item.nw;
+      if (projected > MOSAIC_W && cur.length > 0) {
+        rows.push(cur); cur = [item]; curW = item.nw;
+      } else {
+        cur.push(item); curW = projected;
+      }
+    });
+    if (cur.length) { rows.push(cur); }
+
+    var y = MOSAIC_TOP;
+    rows.forEach(function (row) {
+      if (y + MIN_H > MOSAIC_TOP + MOSAIC_H) { return; }
+      // Row height derived from actual aspect ratios — preserves each cover's shape
+      var sumAR = row.reduce(function (s, it) { return s + it.ar; }, 0);
+      var rowH  = Math.round((MOSAIC_W - GAP * (row.length - 1)) / sumAR);
+      rowH      = Math.min(rowH, MAX_H, MOSAIC_TOP + MOSAIC_H - y);
+      if (rowH <= 0) { return; }
+      var x = MOSAIC_LEFT;
+      row.forEach(function (item) {
+        var iw  = Math.round(rowH * item.ar);
+        var img = item.book.imageId ? coverMap[item.book.imageId] : null;
+        // Neobrutalism: hard offset shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.90)';
+        ctx.fillRect(x + 5, y + 5, iw, rowH);
+        if (img) {
+          ctx.drawImage(img, x, y, iw, rowH);
+        } else {
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(x, y, iw, rowH);
+          ctx.save();
+          ctx.font = Math.floor(Math.min(iw, rowH) * 0.4) + 'px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\uD83D\uDCDA', x + iw / 2, y + rowH / 2);
+          ctx.restore();
+        }
+        // Thick border
+        ctx.lineWidth   = 3;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeRect(x, y, iw, rowH);
+        x += iw + GAP;
+      });
+      y += rowH + GAP;
+    });
+
+    return c;
+  }
+
   // ── Theme registration ─────────────────────────────────────────────────
 
   window.WrappedThemes['neobrutalism'] = {
@@ -1057,7 +1152,8 @@
       slideQuotes:      slideQuotes,
       slideWordsCloud:  slideWordsCloud,
       slideWordCloud:   slideWordCloud,
-      slideGenres:      slideGenres
+      slideGenres:      slideGenres,
+      slideMosaic:      slideMosaic
     }
   };
 }());

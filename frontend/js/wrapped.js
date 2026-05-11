@@ -1520,6 +1520,78 @@
     return c;
   }
 
+  // ── Slide — Books Mosaic ─────────────────────────────────────────────────
+
+  function slideMosaic(allBooksForYear, coverMap, year) {
+    var c   = makeCanvas();
+    var ctx = c.getContext('2d');
+    drawBg(ctx, 10);
+
+    drawSectionHeader(ctx, year + ' \u00b7 Books Mosaic', 210);
+
+    var books = allBooksForYear.slice().sort(function (a, b) { return b.minutes - a.minutes; });
+    if (!books.length) {
+      ctx.save();
+      ctx.font      = '52px ' + FONT.body;
+      ctx.fillStyle = CLR.muted;
+      ctx.textAlign = 'center';
+      ctx.fillText('No books this year', W / 2, H / 2);
+      ctx.restore();
+      drawBranding(ctx);
+      return c;
+    }
+
+    var COVER_AR    = 2 / 3;
+    var MAX_H       = 320;
+    var MIN_H       = 40;
+    var GAP         = 5;
+    var MOSAIC_TOP  = 260;
+    var MOSAIC_LEFT = 40;
+    var MOSAIC_W    = W - MOSAIC_LEFT * 2;
+    var MOSAIC_H    = H - MOSAIC_TOP - 40;
+    var maxMin      = books[0].minutes;
+
+    var items = books.map(function (b) {
+      var img = b.imageId ? coverMap[b.imageId] : null;
+      var ar  = (img && img.naturalWidth && img.naturalHeight) ? (img.naturalWidth / img.naturalHeight) : COVER_AR;
+      var t   = Math.sqrt(b.minutes / maxMin);
+      var nh  = MIN_H + t * (MAX_H - MIN_H);
+      return { book: b, nh: nh, nw: nh * ar, ar: ar };
+    });
+
+    // Greedy row packing
+    var rows = [], cur = [], curW = 0;
+    items.forEach(function (item) {
+      var projected = curW + (cur.length ? GAP : 0) + item.nw;
+      if (projected > MOSAIC_W && cur.length > 0) {
+        rows.push(cur); cur = [item]; curW = item.nw;
+      } else {
+        cur.push(item); curW = projected;
+      }
+    });
+    if (cur.length) { rows.push(cur); }
+
+    var y = MOSAIC_TOP;
+    rows.forEach(function (row) {
+      if (y + MIN_H > MOSAIC_TOP + MOSAIC_H) { return; }
+      // Row height derived from actual aspect ratios — preserves each cover's shape
+      var sumAR = row.reduce(function (s, it) { return s + it.ar; }, 0);
+      var rowH  = Math.round((MOSAIC_W - GAP * (row.length - 1)) / sumAR);
+      rowH      = Math.min(rowH, MAX_H, MOSAIC_TOP + MOSAIC_H - y);
+      if (rowH <= 0) { return; }
+      var x = MOSAIC_LEFT;
+      row.forEach(function (item) {
+        var iw  = Math.round(rowH * item.ar);
+        drawCover(ctx, item.book.imageId ? coverMap[item.book.imageId] : null, x, y, iw, rowH);
+        x += iw + GAP;
+      });
+      y += rowH + GAP;
+    });
+
+    drawBranding(ctx);
+    return c;
+  }
+
   // ── Slide — Word Cloud ───────────────────────────────────────────────────
 
   function slideWordCloud(genreStats, year) {
@@ -1716,7 +1788,8 @@
           { name: '07-quotes.png',      canvas: callSlide('slideQuotes',     slideQuotes,     hlStats, year) },
           { name: '09-words-cloud.png', canvas: callSlide('slideWordsCloud', slideWordsCloud, hlStats, year) },
           { name: '10-genres.png',      canvas: callSlide('slideGenres',     slideGenres,     genreStats, year) },
-          { name: '11-wordcloud.png',   canvas: callSlide('slideWordCloud',  slideWordCloud,  genreStats, year) }
+          { name: '11-wordcloud.png',   canvas: callSlide('slideWordCloud',  slideWordCloud,  genreStats, year) },
+          { name: '12-mosaic.png',      canvas: callSlide('slideMosaic',     slideMosaic,     allBooksForYear, coverMap, year) }
         ];
 
         onProgress('Done', 100);
