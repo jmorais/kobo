@@ -799,12 +799,12 @@
     });
 
     // ── Chip layout — variable-width pills packed left-to-right ──
-    var chipFills = ['#fef08a', '#fbcfe8', '#a7f3d0', '#bfdbfe', '#fed7aa', '#ddd6fe'];
-    var chipFS    = 30;   // font size
-    var chipH     = 60;   // pill height
-    var chipPadX  = 20;   // horizontal inner padding each side
-    var chipGapX  = 10;   // horizontal gap between pills
-    var chipGapY  = 14;   // vertical gap between rows
+    var chipFills = ['#fef08a', '#fbcfe8', '#a7f3d0', '#bfdbfe', '#fed7aa', '#ddd6fe', '#fca5a5', '#6ee7b7', '#93c5fd', '#fdba74', '#f9a8d4', '#d9f99d', '#67e8f9', '#c4b5fd', '#fde68a', '#bbf7d0'];
+    var chipFS    = 24;   // font size
+    var chipH     = 48;   // pill height
+    var chipPadX  = 16;   // horizontal inner padding each side
+    var chipGapX  = 8;    // horizontal gap between pills
+    var chipGapY  = 10;   // vertical gap between rows
     var startY    = 340;
     var curX      = M;
     var curY      = startY;
